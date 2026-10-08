@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-EASYWORK_VERSION="0.0.1"
+EASYWORK_VERSION="0.1.0"
 
 # EasyWork home — single state root (overridable for sandboxed/isolated runs)
 EASYWORK_HOME="${EASYWORK_HOME:-${HOME}/.easywork}"

@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Version (set by bin/easywork; default for standalone module usage)
-EASYWORK_VERSION="${EASYWORK_VERSION:-0.0.1}"
+EASYWORK_VERSION="${EASYWORK_VERSION:-0.1.0}"
 
 # EasyWork home directory — centralizes all CLI state (config, manifest, cache, completions).
 # Overridable via EASYWORK_HOME for sandboxed/isolated runs (e.g. AI agents, tests).
