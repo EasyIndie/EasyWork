@@ -11,6 +11,9 @@ export VERBOSE=false
 # Mock functions that modules call but tests shouldn't execute
 # shellcheck disable=SC2329  # mock functions are invoked via export -f in subprocesses
 setup_mocks() {
+    # Ignore any EASYWORK_* env leaking from the developer's shell so paths
+    # derive from the per-test $HOME below.
+    unset EASYWORK_HOME EASYWORK_RAW_URL EASYWORK_RELEASE_URL EASYWORK_API_URL EASYWORK_WEB_URL
     # Unique temp HOME per test: keeps tests isolated and makes parallel
     # execution (across files) safe.
     TEST_HOME="$(mktemp -d "${BATS_TMPDIR:-/tmp}/easywork.XXXXXX")"

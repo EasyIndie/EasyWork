@@ -9,6 +9,8 @@ setup() {
     mkdir -p "$TEST_HOME/.local/bin"
     export TMPDIR="$TEST_HOME/tmp"
     mkdir -p "$TMPDIR"
+    # Ignore any EASYWORK_* env leaking from the developer's shell
+    unset EASYWORK_HOME EASYWORK_RAW_URL EASYWORK_RELEASE_URL EASYWORK_API_URL EASYWORK_WEB_URL EASYWORK_CHANNEL
 
     # Create mock wrapper that replaces curl to serve from local repo
     cat > "$TEST_HOME/.local/bin/curl" << MOCK_CURL
