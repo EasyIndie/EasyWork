@@ -103,7 +103,23 @@ setup_mocks() {
         return 0
     }
 
-    export -f curl git vim brew sudo node networksetup scutil 2> /dev/null || true
+    # Mock GitHub CLI + AI CLIs as "already installed" so their modules skip
+    # installation (tests never hit the network / real package managers).
+    # shellcheck disable=SC2329
+    function npm() {
+        echo "MOCK_NPM: $*" >> "${TEST_HOME}/mock_npm.log"
+        return 0
+    }
+    # shellcheck disable=SC2329
+    function gh() { return 0; }
+    # shellcheck disable=SC2329
+    function claude() { return 0; }
+    # shellcheck disable=SC2329
+    function codex() { return 0; }
+    # shellcheck disable=SC2329
+    function pi() { return 0; }
+
+    export -f curl git vim brew sudo node networksetup scutil npm gh claude codex pi 2> /dev/null || true
 }
 
 teardown_mocks() {

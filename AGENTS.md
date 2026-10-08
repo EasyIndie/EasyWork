@@ -71,8 +71,10 @@ DESIGN.md          # v2 蓝图（5 契约 + 人机体验 + 命令名）
   - ✅ **命令名**：`ew` 别名（安装时创建软链、补全覆盖 ew/easywork）
 - ✅ **config.toml 完全取代旧 ini**：`config_init` 创建 config.toml；旧 `config`（ini）仅作只读回退，
   首次 `install` / `config edit` 自动迁移；`config get/set` 读写 config.toml
-- ⏳ **可选（后续）**：新可选模块 modern-shell / ai-tools / editor（模块契约已支持，尚未内置）
-- 测试现状：162 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
+- ✅ **可选模块（定稿见 DESIGN.md §11）**：新增 `gh`（自动安装 GitHub CLI）、
+  `ai-tools`（自动安装 claude code / codex / pi，经 npm，离线/禁用开关可控）
+- ❌ **明确不做**：editor（GUI）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
+- 测试现状：174 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
 
 ## 7. 改动规则
 

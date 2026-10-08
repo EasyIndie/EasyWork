@@ -924,6 +924,9 @@ enable_net_tools    = false
 [git]
 identity = "personal"
 scope    = "global"
+
+[ai_tools]
+install = true
 EOC
     log_info "已创建配置文件: $toml"
     log_info "编辑此文件或运行: easywork config edit"

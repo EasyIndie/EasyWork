@@ -440,4 +440,31 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 
 - ✅ config.toml 已成为主配置；旧 `config`（ini）仅作只读回退，首次 `install` / `config edit` 自动迁移。
 - ⏳ 交互式 `install` 仍保留 Git 作用域/身份菜单（人类可选项）；零交互路径是 `ew init`。
-- ⏳ 新可选模块（modern-shell / ai-tools / editor）未内置，模块契约已支持扩展。
+- ⏳ 新可选模块见 §11（已定稿）。
+
+---
+
+## 11. 可选模块（v2.x 定稿）
+
+> 定位：**CLI 工具，只保留核心**。不引入 GUI，不做通用现代 CLI 增强。
+
+### 保留并新增
+
+| 模块 | 作用 | 安装方式 |
+|---|---|---|
+| `gh` | 安装 GitHub CLI | brew / apt / dnf / yum / pacman / zypper / apk；失败给官方指引 |
+| `ai-tools` | 自动安装 **pi / codex / claude code** | 经 **npm**（三个都有 npm 包）；缺 npm 时给官方指引 |
+
+### 明确不做（需要时再单独加）
+
+- `editor`（VS Code / Cursor，**GUI**，与本工具 CLI 定位不符）
+- `modern-shell`（mise / starship / zoxide / eza / bat / fd / ripgrep / delta / atuin / direnv … 全部增强）
+- AI 会话编排器（vibe-kanban / claude-squad / agent-deck …）
+- AI 配置管理器（bridle / agman / coder-config …）
+
+### 安装行为约定
+
+- 尊重 `--dry-run`（只预览）与 `--offline`（跳过联网安装）
+- **幂等**：已安装则跳过
+- 失败**不阻塞**整体安装（记录 manifest，给出手动安装指引）
+- 核心仍**零运行时依赖**

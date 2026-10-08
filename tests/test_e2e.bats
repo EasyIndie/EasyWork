@@ -41,7 +41,7 @@ MOCK_CURL
 
     # Mock other commands
     # GIT_MOCK_IN_REPO: set to "true" to make git rev-parse --git-dir succeed
-    for cmd in git vim brew sudo node; do
+    for cmd in git vim brew sudo node npm gh claude codex pi; do
         cat > "$TEST_HOME/.local/bin/$cmd" << 'MOCK_CMD'
 #!/usr/bin/env bash
 case "${1:-}" in

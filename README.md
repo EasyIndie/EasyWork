@@ -89,6 +89,15 @@ ew <命令> [参数] [选项]
 
 NERDTree、Airline、fzf、coc.nvim、ALE、Markdown 预览、Git 集成等。
 
+### GitHub CLI (gh)
+
+自动安装官方 GitHub CLI，便于在终端完成 PR / issue / release / actions 操作。
+
+### AI 工具 (ai-tools)
+
+自动安装 **claude code / codex / pi**（经 npm）；离线模式自动跳过。
+可通过 `[ai_tools] install = false` 关闭。
+
 ---
 
 ## 配置

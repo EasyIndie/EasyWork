@@ -30,3 +30,6 @@ email = ""
 
 [vim]
 enabled = true
+
+[ai_tools]
+install = true   # 自动安装 claude code / codex / pi（离线模式自动跳过）
