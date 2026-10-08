@@ -258,7 +258,8 @@ manifest_module_failed_at <name>
 // version
 { "version": "0.0.1", "channel": "dev",
   "install_date": "2026-06-12T10:15:30+0800",
-  "installed": ["shell", "git", "vim"] }
+  "installed": ["shell", "git", "vim"],
+  "update": { "latest": "v1.0.0", "available": true } }
 
 // list
 { "modules": [
@@ -271,7 +272,8 @@ manifest_module_failed_at <name>
   "modules": [
     { "name": "git", "state": "true", "ok": true, "scope": "global",
       "identity": "personal" }
-  ] }
+  ],
+  "update": { "latest": "v1.0.0", "available": true } }
 
 // doctor
 { "checks": [

@@ -391,6 +391,20 @@ FAIL_CURL
     [[ "$output" =~ "新版本 v1.0.0" ]]
 }
 
+@test "e2e: status --json includes structured update field" {
+    run easywork status --json
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ '"update":' ]]
+    [[ "$output" =~ '"latest":"v1.0.0"' ]]
+    [[ "$output" =~ '"available":true' ]]
+}
+
+@test "e2e: version --json includes structured update field" {
+    run easywork version --json
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ '"update":' ]]
+}
+
 @test "e2e: install git keeps module manifest keys" {
     mkdir -p "$TEST_HOME/.easywork"
     printf '[user]\n  name = preexisting\n' > "$TEST_HOME/.gitconfig"

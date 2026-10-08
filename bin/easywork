@@ -238,11 +238,12 @@ _cmd_version_json() {
         done
         installed_json="[${arr}]"
     fi
-    printf '{"ok":true,"command":"version","data":{"version":"%s","channel":"%s","install_date":"%s","installed":%s},"error":null}\n' \
+    printf '{"ok":true,"command":"version","data":{"version":"%s","channel":"%s","install_date":"%s","installed":%s,"update":%s},"error":null}\n' \
         "$(json_escape "$EASYWORK_VERSION")" \
         "$(json_escape "${EASYWORK_CHANNEL:-}")" \
         "$(json_escape "$install_date")" \
-        "$installed_json"
+        "$installed_json" \
+        "$(update_json_fragment)"
 }
 
 # ─── CLI: List ────────────────────────────────────────────────
@@ -342,8 +343,8 @@ _cmd_status_json() {
         modules_json="${modules_json}{\"name\":\"$(json_escape "$name")\",\"state\":\"$(json_escape "$state")\",\"ok\":$ok}"
     done
 
-    printf '{"ok":true,"command":"status","data":{"config":%s,"modules":[%s]},"error":null}\n' \
-        "$config_json" "$modules_json"
+    printf '{"ok":true,"command":"status","data":{"config":%s,"modules":[%s],"update":%s},"error":null}\n' \
+        "$config_json" "$modules_json" "$(update_json_fragment)"
 }
 
 # ─── CLI: Doctor ──────────────────────────────────────────────

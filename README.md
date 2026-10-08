@@ -58,7 +58,7 @@ ew <命令> [参数] [选项]
 
 | 全局选项 | 说明 |
 |---|---|
-| `--json` | 机器可读 JSON 输出（日志走 stderr） |
+| `--json` | 机器可读 JSON 输出（日志走 stderr；`version`/`status` 含 `update` 字段） |
 | `--dry-run` | 预览变更，不执行 |
 | `--yes` `-y` | 跳过确认 |
 | `--verbose` `-v` | 详细输出 |

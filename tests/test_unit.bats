@@ -887,3 +887,22 @@ EOF
     run notify_if_update_available
     [[ ! "$output" =~ "新版本" ]]
 }
+
+@test "unit: update_json_fragment reports availability" {
+    function curl() { echo '{"tag_name":"v9.9.9"}'; }
+    run update_json_fragment
+    [[ "$output" == '{"latest":"v9.9.9","available":true}' ]]
+}
+
+@test "unit: update_json_fragment up-to-date" {
+    function curl() { echo '{"tag_name":"v1.0.0"}'; }
+    run update_json_fragment
+    [[ "$output" == '{"latest":"v1.0.0","available":false}' ]]
+}
+
+@test "unit: update_json_fragment offset when offline" {
+    OFFLINE=true
+    run update_json_fragment
+    OFFLINE=false
+    [[ "$output" == '{"latest":null,"available":false}' ]]
+}

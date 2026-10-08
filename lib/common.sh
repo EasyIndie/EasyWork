@@ -1136,29 +1136,54 @@ _fetch_latest_version() {
     printf '%s' "$ver"
 }
 
-# Non-blocking "new version available" notice.
-# Skipped in JSON/offline mode and throttled to at most once per 24h.
-notify_if_update_available() {
-    [[ "${OFFLINE:-false}" == "true" ]] && return 0
-    [[ "${JSON_MODE:-false}" == "true" ]] && return 0
-
+# Resolve the latest release version, cached for 24h (empty on no info/failure).
+resolve_latest_version() {
     local cache="${EASYWORK_HOME}/.last_update_check"
     local now
     now="$(date +%s)"
     if [[ -f "$cache" ]]; then
-        local last
-        last="$(head -1 "$cache" 2> /dev/null || echo 0)"
+        local last cached
+        last="$(sed -n '1p' "$cache" 2> /dev/null || true)"
+        cached="$(sed -n '2p' "$cache" 2> /dev/null || true)"
         case "$last" in
             '' | *[!0-9]*) last=0 ;;
         esac
-        ((now - last < 86400)) && return 0
+        if ((now - last < 86400)); then
+            printf '%s' "$cached"
+            return 0
+        fi
     fi
-
     local latest
     latest="$(_fetch_latest_version)"
     _ensure_easywork_home
-    printf '%s\n' "$now" > "$cache" 2> /dev/null || true
+    printf '%s\n%s\n' "$now" "$latest" > "$cache" 2> /dev/null || true
+    printf '%s' "$latest"
+}
 
+# JSON fragment describing update availability (for --json outputs).
+# Shape: {"latest":"vX.Y.Z"|"null","available":true|false}
+update_json_fragment() {
+    if [[ "${OFFLINE:-false}" == "true" ]]; then
+        printf '{"latest":null,"available":false}'
+        return 0
+    fi
+    local latest
+    latest="$(resolve_latest_version)"
+    if [[ -z "$latest" ]]; then
+        printf '{"latest":null,"available":false}'
+        return 0
+    fi
+    local available=false
+    _semver_is_newer "$latest" "$EASYWORK_VERSION" && available=true
+    printf '{"latest":"%s","available":%s}' "$(json_escape "$latest")" "$available"
+}
+
+# Non-blocking "new version available" notice (human mode only).
+notify_if_update_available() {
+    [[ "${OFFLINE:-false}" == "true" ]] && return 0
+    [[ "${JSON_MODE:-false}" == "true" ]] && return 0
+    local latest
+    latest="$(resolve_latest_version)"
     [[ -n "$latest" ]] || return 0
     if _semver_is_newer "$latest" "$EASYWORK_VERSION"; then
         log_info "发现新版本 ${latest}（当前 ${EASYWORK_VERSION}）: 运行 easywork update 升级"
