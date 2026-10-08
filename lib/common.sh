@@ -9,8 +9,19 @@ set -euo pipefail
 # Version (set by bin/easywork; default for standalone module usage)
 EASYWORK_VERSION="${EASYWORK_VERSION:-0.0.1}"
 
-# EasyWork home directory — centralizes all CLI config, manifest, cache, and completions
-EASYWORK_HOME="${HOME}/.easywork"
+# EasyWork home directory — centralizes all CLI state (config, manifest, cache, completions).
+# Overridable via EASYWORK_HOME for sandboxed/isolated runs (e.g. AI agents, tests).
+EASYWORK_HOME="${EASYWORK_HOME:-${HOME}/.easywork}"
+
+# ─── State Paths (single source of truth) ─────────────────────
+# All tool state derives from EASYWORK_HOME. Modules must use these helpers
+# instead of hardcoding paths.
+ew_home() { echo "$EASYWORK_HOME"; }
+ew_config_path() { echo "${EASYWORK_HOME}/config.toml"; }
+ew_legacy_config() { echo "${EASYWORK_HOME}/config"; }
+ew_manifest_path() { echo "${EASYWORK_HOME}/manifest"; }
+ew_lib_cache() { echo "${EASYWORK_HOME}/lib/v${EASYWORK_VERSION}"; }
+ew_completions_dir() { echo "${EASYWORK_HOME}/completions"; }
 
 # Ensure the home directory exists
 _ensure_easywork_home() {
@@ -56,8 +67,20 @@ if $COLOR_ENABLED; then
 fi
 
 # ─── Logging ──────────────────────────────────────────────────
-log_info() { printf "  %s●%s %s\n" "${C_CYAN}" "${C_RESET}" "$*"; }
-log_success() { printf "  %s✓%s %s\n" "${C_GREEN}" "${C_RESET}" "$*"; }
+log_info() {
+    if [[ "${JSON_MODE:-false}" == "true" ]]; then
+        printf "  %s●%s %s\n" "${C_CYAN}" "${C_RESET}" "$*" >&2
+    else
+        printf "  %s●%s %s\n" "${C_CYAN}" "${C_RESET}" "$*"
+    fi
+}
+log_success() {
+    if [[ "${JSON_MODE:-false}" == "true" ]]; then
+        printf "  %s✓%s %s\n" "${C_GREEN}" "${C_RESET}" "$*" >&2
+    else
+        printf "  %s✓%s %s\n" "${C_GREEN}" "${C_RESET}" "$*"
+    fi
+}
 log_warn() { printf "  %s!%s %s\n" "${C_YELLOW}" "${C_RESET}" "$*" >&2; }
 log_error() { printf "  %s✗%s %s\n" "${C_RED}" "${C_RESET}" "$*" >&2; }
 log_verbose() {
@@ -114,6 +137,11 @@ check_network() {
 }
 
 safe_download() {
+    if [[ "${OFFLINE:-false}" == "true" ]]; then
+        log_warn "离线模式：跳过下载"
+        return $EXIT_NETWORK
+    fi
+
     local expected_sha256=""
     local positional_args=()
 
@@ -308,8 +336,112 @@ replace_managed_section() {
     fi
 }
 
+# ─── Managed File Engine ──────────────────────────────────────
+# High-level helpers so modules don't reimplement backup/remove/restore logic.
+
+# Remove the EasyWork managed section from <file>, preserving other content.
+# Returns 1 (and leaves the file untouched) if the markers are malformed.
+remove_managed_section() {
+    local file="$1"
+    if [[ ! -f "$file" ]] || ! grep -qE "managed section begin" "$file" 2> /dev/null; then
+        return 0
+    fi
+    local tmpfile
+    tmpfile="${file}.tmp.$$"
+    _register_temp_file "$tmpfile"
+    local in_section=false
+    local line
+    while IFS= read -r line; do
+        if [[ "$line" =~ "managed section begin" ]]; then
+            in_section=true
+            continue
+        fi
+        if $in_section && [[ "$line" =~ "managed section end" ]]; then
+            in_section=false
+            continue
+        fi
+        if ! $in_section; then
+            printf '%s\n' "$line" >> "$tmpfile"
+        fi
+    done < "$file"
+    if $in_section; then
+        log_warn "检测到不完整的 EasyWork 标记段，跳过修改: $file"
+        rm -f "$tmpfile" 2> /dev/null || true
+        return 1
+    fi
+    mv "$tmpfile" "$file"
+    return 0
+}
+
+# Idempotently write a managed section into <target>.
+# Backs up a pre-existing unmanaged file and records the path in <backup_var>
+# (empty string if no backup was needed).
+# Usage: apply_managed_file <target> <content> <comment> <backup_var>
+apply_managed_file() {
+    local target="$1"
+    local content="$2"
+    local comment="${3:-#}"
+    local backup_var="${4:-}"
+
+    local _ew_bak=""
+    if [[ -f "$target" ]] && ! grep -qF "EasyWork managed section" "$target" 2> /dev/null; then
+        _ew_bak="$(backup_file "$target")" || return 1
+    fi
+    if [[ -n "$backup_var" ]]; then
+        printf -v "$backup_var" '%s' "$_ew_bak"
+    fi
+    replace_managed_section "$target" "$EASYWORK_VERSION" "$content" "$comment"
+}
+
+# Remove the managed section from <target>; restore the backup at <backup_path>
+# (if any) afterwards. Usage: remove_managed_file <target> [backup_path]
+remove_managed_file() {
+    local target="$1"
+    local backup_path="${2:-}"
+    remove_managed_section "$target" || true
+    if [[ -n "$backup_path" ]] && [[ -f "$backup_path" ]]; then
+        restore_backup "$backup_path" "$target" || true
+    fi
+    return 0
+}
+
+# Resolve a variable by name (set -u safe). Usage: _indirect_get <name>
+_indirect_get() {
+    local name="$1"
+    if [[ -z "$name" ]] || ! declare -p "$name" > /dev/null 2>&1; then
+        printf '%s' ""
+        return 0
+    fi
+    printf '%s' "${!name}"
+}
+
+# Declarative batch helpers driven by MODULE_DECLARE.
+# Entry format: <target>|<content_fn>|<comment>|<backup_var>
+apply_module_files() {
+    # shellcheck disable=SC2154  # MODULE_DECLARE is defined by the sourcing module
+    local entry target content_fn comment backup_var content
+    for entry in "${MODULE_DECLARE[@]}"; do
+        IFS='|' read -r target content_fn comment backup_var <<< "$entry"
+        content="$("$content_fn")"
+        apply_managed_file "$target" "$content" "${comment:-#}" "$backup_var" || return 1
+    done
+    return 0
+}
+
+remove_module_files() {
+    # shellcheck disable=SC2154  # MODULE_DECLARE is defined by the sourcing module
+    local entry target content_fn comment backup_var backup_path
+    for entry in "${MODULE_DECLARE[@]}"; do
+        IFS='|' read -r target content_fn comment backup_var <<< "$entry"
+        : "$content_fn" # parsed for symmetry; unused on removal
+        backup_path="$(_indirect_get "$backup_var")"
+        remove_managed_file "$target" "$backup_path" || true
+    done
+    return 0
+}
+
 # ─── Manifest Management ──────────────────────────────────────
-MANIFEST_FILE="${EASYWORK_HOME}/manifest"
+MANIFEST_FILE="$(ew_manifest_path)"
 
 manifest_file() { echo "$MANIFEST_FILE"; }
 
@@ -335,6 +467,10 @@ manifest_get_version() {
     manifest_read "easywork_version" "0.0.0"
 }
 
+manifest_get_schema_version() {
+    manifest_read "schema_version" "1"
+}
+
 manifest_section_exists() {
     local section="$1"
     manifest_exists && grep -qF "[$section]" "$MANIFEST_FILE" 2> /dev/null
@@ -355,6 +491,7 @@ manifest_init() {
     _ensure_easywork_home
     cat > "$MANIFEST_FILE" << EOF
 # EasyWork Manifest — auto-generated, do not edit
+schema_version=1
 easywork_version=${version}
 install_date=$(date +%Y-%m-%dT%H:%M:%S%z)
 EOF
@@ -504,121 +641,343 @@ manifest_read_section_key() {
     echo "$default"
 }
 
+# Return a module's installation state: true|false|failed|absent
+manifest_module_state() {
+    local name="$1"
+    if ! manifest_exists; then
+        echo "absent"
+        return 0
+    fi
+    local val
+    val="$(manifest_read_section_key "$name" "installed" "")"
+    echo "${val:-absent}"
+}
+
 # ─── Config File Management ───────────────────────────────────
-CONFIG_FILE="${EASYWORK_HOME}/config"
-CONFIG_EXAMPLE="${EASYWORK_ROOT:-.}/easywork.conf.example"
+CONFIG_FILE="$(ew_legacy_config)"
 
-config_path() { echo "$CONFIG_FILE"; }
+# Canonical config path (v2: config.toml).
+config_path() { ew_config_path; }
 
-config_exists() { [[ -f "$CONFIG_FILE" ]]; }
+# The file actually holding config: config.toml if present, else legacy ini.
+config_active_file() {
+    if [[ -f "$(ew_config_path)" ]]; then
+        ew_config_path
+    else
+        ew_legacy_config
+    fi
+}
 
+# True when either config.toml or the legacy ini exists.
+config_exists() {
+    [[ -f "$(ew_config_path)" ]] || [[ -f "$(ew_legacy_config)" ]]
+}
+
+# Load config into shell variables.
+# Legacy ini ($CONFIG_FILE) is sourced as a read-only fallback; config.toml wins.
 config_load() {
-    if config_exists; then
+    if [[ -f "$CONFIG_FILE" ]]; then
         # shellcheck source=/dev/null
         source "$CONFIG_FILE"
     fi
+    local toml
+    toml="$(ew_config_path)"
+    if [[ -f "$toml" ]]; then
+        GIT_PERSONAL_NAME="$(cfg_get 'git.identities.personal.name' "${GIT_PERSONAL_NAME:-}")"
+        GIT_PERSONAL_EMAIL="$(cfg_get 'git.identities.personal.email' "${GIT_PERSONAL_EMAIL:-}")"
+        GIT_WORK_NAME="$(cfg_get 'git.identities.work.name' "${GIT_WORK_NAME:-}")"
+        GIT_WORK_EMAIL="$(cfg_get 'git.identities.work.email' "${GIT_WORK_EMAIL:-}")"
+    fi
+}
+
+# ─── TOML Config Accessors (config.toml, v1 subset) ────────────
+# v1 supports only scalar values (string/bool/integer), dotted section
+# names, and '#' comments. No arrays or inline tables.
+
+# Trim leading/trailing whitespace (bash 3.2 compatible).
+_cfg_trim() {
+    local s="$1"
+    s="${s#"${s%%[![:space:]]*}"}"
+    s="${s%"${s##*[![:space:]]}"}"
+    printf '%s' "$s"
+}
+
+# Extract the scalar from a raw 'key = value' right-hand side.
+_cfg_value() {
+    local raw="$1"
+    raw="$(_cfg_trim "$raw")"
+    if [[ "$raw" == \"* ]]; then
+        raw="${raw#\"}"
+        raw="${raw%%\"*}"
+    else
+        raw="${raw%%#*}"
+        raw="$(_cfg_trim "$raw")"
+    fi
+    printf '%s' "$raw"
+}
+
+# Read a scalar from config.toml by dotted key.
+# Usage: cfg_get <section.key> [default]
+cfg_get() {
+    local key="$1"
+    local default="${2:-}"
+    local file
+    file="$(ew_config_path)"
+    if [[ ! -f "$file" ]]; then
+        printf '%s' "$default"
+        return 0
+    fi
+
+    local want_section="" want_key="$key"
+    if [[ "$key" == *.* ]]; then
+        want_section="${key%.*}"
+        want_key="${key##*.}"
+    fi
+
+    local line current_section="" lhs
+    while IFS= read -r line; do
+        line="${line%%$'\r'}"
+        line="$(_cfg_trim "$line")"
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        if [[ "$line" == \[*\] ]]; then
+            current_section="${line#[}"
+            current_section="${current_section%]}"
+            current_section="$(_cfg_trim "$current_section")"
+            continue
+        fi
+        [[ "$current_section" == "$want_section" ]] || continue
+        if [[ "$line" == "$want_key"*"="* ]]; then
+            lhs="${line%%=*}"
+            lhs="$(_cfg_trim "$lhs")"
+            [[ "$lhs" == "$want_key" ]] || continue
+            _cfg_value "${line#*=}"
+            return 0
+        fi
+    done < "$file"
+
+    printf '%s' "$default"
+    return 0
+}
+
+# Read a boolean from config.toml (normalized to true/false).
+cfg_get_bool() {
+    local key="$1"
+    local default="${2:-false}"
+    local v
+    v="$(cfg_get "$key" "$default")"
+    case "$v" in
+        true | TRUE | 1 | yes | on) printf 'true' ;;
+        false | FALSE | 0 | no | off) printf 'false' ;;
+        *) printf '%s' "$default" ;;
+    esac
+}
+
+# Lightweight validation of config.toml (syntax + schema_version).
+# Returns 0 if OK (or file absent), 1 otherwise.
+cfg_valid() {
+    local file
+    file="$(ew_config_path)"
+    if [[ ! -f "$file" ]]; then
+        return 0
+    fi
+    local schema
+    schema="$(cfg_get schema_version 1)"
+    if [[ "$schema" != "1" ]]; then
+        log_warn "config.toml schema_version=${schema}，期望 1"
+        return 1
+    fi
+    return 0
+}
+
+# Upsert a scalar value in config.toml (creates file/section as needed).
+# Keeps unrelated lines intact. Values are written as TOML double-quoted strings.
+# Usage: cfg_set <section.key> <value>
+cfg_set() {
+    local key="$1"
+    local value="$2"
+    local file
+    file="$(ew_config_path)"
+
+    local section="" keyname="$key"
+    if [[ "$key" == *.* ]]; then
+        section="${key%.*}"
+        keyname="${key##*.}"
+    fi
+
+    _ensure_easywork_home
+    if [[ ! -f "$file" ]]; then
+        printf 'schema_version = 1\n' > "$file"
+    fi
+
+    local esc="$value"
+    esc="${esc//\\/\\\\}"
+    esc="${esc//\"/\\\"}"
+
+    local tmpfile
+    tmpfile="${file}.tmp.$$"
+    _register_temp_file "$tmpfile"
+
+    local section_found=false key_written=false in_target=false
+    local line sec lhs
+    while IFS= read -r line; do
+        if [[ "$line" == \[*\] ]]; then
+            if $in_target && ! $key_written; then
+                printf '%s = "%s"\n' "$keyname" "$esc" >> "$tmpfile"
+                key_written=true
+            fi
+            sec="${line#[}"
+            sec="${sec%]}"
+            sec="$(_cfg_trim "$sec")"
+            if [[ "$sec" == "$section" ]]; then
+                in_target=true
+                section_found=true
+            else
+                in_target=false
+            fi
+            printf '%s\n' "$line" >> "$tmpfile"
+            continue
+        fi
+        if $in_target; then
+            lhs="${line%%=*}"
+            lhs="$(_cfg_trim "$lhs")"
+            if [[ "$lhs" == "$keyname" ]]; then
+                printf '%s = "%s"\n' "$keyname" "$esc" >> "$tmpfile"
+                key_written=true
+                continue
+            fi
+        fi
+        printf '%s\n' "$line" >> "$tmpfile"
+    done < "$file"
+
+    if $in_target && ! $key_written; then
+        printf '%s = "%s"\n' "$keyname" "$esc" >> "$tmpfile"
+        key_written=true
+    fi
+
+    if ! $section_found; then
+        printf '\n[%s]\n' "$section" >> "$tmpfile"
+        printf '%s = "%s"\n' "$keyname" "$esc" >> "$tmpfile"
+    fi
+
+    mv "$tmpfile" "$file"
+    return 0
+}
+
+# Migrate the legacy ini config (CONFIG_FILE) to config.toml (once).
+# No-op if config.toml already exists or legacy config is absent.
+config_migrate() {
+    local toml
+    toml="$(ew_config_path)"
+    if [[ -f "$toml" ]]; then
+        return 0
+    fi
+
+    local legacy
+    legacy="$(ew_legacy_config)"
+    if [[ ! -f "$legacy" ]]; then
+        return 0
+    fi
+
+    # shellcheck source=/dev/null
+    source "$legacy"
+
+    _ensure_easywork_home
+    {
+        echo "schema_version = 1"
+        echo ""
+        echo "[git.identities.personal]"
+        echo "name  = \"${GIT_PERSONAL_NAME:-}\""
+        echo "email = \"${GIT_PERSONAL_EMAIL:-}\""
+        echo ""
+        echo "[git.identities.work]"
+        echo "name  = \"${GIT_WORK_NAME:-}\""
+        echo "email = \"${GIT_WORK_EMAIL:-}\""
+    } > "$toml"
+    log_info "已迁移旧配置到 $(ew_config_path)"
+    return 0
+}
+
+# Ensure config.toml exists: migrate legacy ini, else write a default template.
+_ensure_config_toml() {
+    _ensure_easywork_home
+    local toml
+    toml="$(ew_config_path)"
+    if [[ -f "$toml" ]]; then
+        return 0
+    fi
+    if [[ -f "$(ew_legacy_config)" ]]; then
+        config_migrate
+        return 0
+    fi
+    cat > "$toml" << 'EOC'
+# EasyWork 配置文件（v2）
+# 编辑: easywork config edit
+# 或:   easywork config set <键> <值>
+schema_version = 1
+
+[shell]
+enable_aliases      = true
+enable_fancy_prompt = false
+enable_ohmyzsh      = false
+enable_net_tools    = false
+
+[git]
+identity = "personal"
+scope    = "global"
+EOC
+    log_info "已创建配置文件: $toml"
+    log_info "编辑此文件或运行: easywork config edit"
 }
 
 config_init() {
-    _ensure_easywork_home
-    if ! config_exists; then
-        if [[ -f "$CONFIG_EXAMPLE" ]]; then
-            cp "$CONFIG_EXAMPLE" "$CONFIG_FILE"
-            log_info "已创建配置文件: $CONFIG_FILE"
-            log_info "请编辑此文件填入你的个人信息: easywork config edit"
-        else
-            cat > "$CONFIG_FILE" << 'EOC'
-# EasyWork 配置文件
-# 各模块配置由对应模块自行管理
-# 编辑: easywork config edit
-EOC
-        fi
-    fi
+    _ensure_config_toml
     config_load
 }
 
-_save_config_var() {
-    local section="$1" key="$2" value="$3"
-    local section_marker="## ${section}"
-
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        config_init
-    fi
-
-    # Escape key for regex use (grep -E / sed)
-    local escaped_key
-    escaped_key="$(_escape_regex "$key")"
-    # Escape value for sed replacement side
-    local escaped_value
-    escaped_value="$(_escape_sed_replacement "$value")"
-
-    # Ensure section marker exists
-    if ! grep -qF "$section_marker" "$CONFIG_FILE" 2> /dev/null; then
-        printf '\n' >> "$CONFIG_FILE"
-        printf '%s\n' "$section_marker" >> "$CONFIG_FILE"
-    fi
-
-    # Upsert key=value
-    if grep -q "^${escaped_key}=" "$CONFIG_FILE" 2> /dev/null; then
-        local tmpfile="${CONFIG_FILE}.tmp.$$"
-        _register_temp_file "$tmpfile"
-        sed "s/^${escaped_key}=.*/${key}=\"${escaped_value}\"/" "$CONFIG_FILE" > "$tmpfile" 2> /dev/null
-        mv "$tmpfile" "$CONFIG_FILE"
-    else
-        # Insert after section marker
-        local tmpfile="${CONFIG_FILE}.tmp.$$"
-        _register_temp_file "$tmpfile"
-        while IFS= read -r line; do
-            printf '%s\n' "$line" >> "$tmpfile"
-            [[ "$line" == "$section_marker" ]] && printf '%s\n' "${key}=\"${value}\"" >> "$tmpfile"
-        done < "$CONFIG_FILE"
-        mv "$tmpfile" "$CONFIG_FILE"
-    fi
-}
-
 config_show() {
-    echo "配置文件路径: $(config_path)"
-    echo ""
-    if config_exists; then
-        local cfg_file
-        cfg_file="$(config_path)"
-
-        # --- File Metadata ---
-        local file_size line_count mod_time
-        file_size="$(wc -c < "$cfg_file" | tr -d ' ')"
-        line_count="$(wc -l < "$cfg_file" | tr -d ' ')"
-        if [[ "$(detect_os)" == "macos" ]]; then
-            mod_time="$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$cfg_file" 2> /dev/null || echo 'unknown')"
-        else
-            mod_time="$(stat -c "%y" "$cfg_file" 2> /dev/null | cut -d. -f1 || echo 'unknown')"
-        fi
-
-        echo "  文件大小: ${file_size} 字节"
-        echo "  行数:     ${line_count} 行"
-        echo "  修改时间: ${mod_time}"
+    local active
+    active="$(config_active_file)"
+    if [[ ! -f "$active" ]]; then
+        echo "配置文件路径: $(config_path)"
         echo ""
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo ""
-
-        # --- Config Content ---
-        local content
-        content="$(cat "$cfg_file")"
-        cat "$cfg_file"
-
-        # Show hint when config has no actual key=value pairs (template-only file)
-        if ! grep -qE '^[a-zA-Z_][a-zA-Z0-9_]*=' "$cfg_file" 2> /dev/null; then
-            echo ""
-            echo "（配置文件尚无配置项，可通过 'easywork config edit' 编辑添加）"
-        fi
-    else
         echo "（配置文件不存在，运行 easywork install 自动创建）"
+        return 0
+    fi
+
+    echo "配置文件路径: $active"
+    if [[ "$active" != "$(ew_config_path)" ]]; then
+        echo "（旧版 ini；运行 easywork config edit 将迁移到 config.toml）"
+    fi
+    echo ""
+
+    # --- File Metadata ---
+    local file_size line_count mod_time
+    file_size="$(wc -c < "$active" | tr -d ' ')"
+    line_count="$(wc -l < "$active" | tr -d ' ')"
+    if [[ "$(detect_os)" == "macos" ]]; then
+        mod_time="$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$active" 2> /dev/null || echo 'unknown')"
+    else
+        mod_time="$(stat -c "%y" "$active" 2> /dev/null | cut -d. -f1 || echo 'unknown')"
+    fi
+
+    echo "  文件大小: ${file_size} 字节"
+    echo "  行数:     ${line_count} 行"
+    echo "  修改时间: ${mod_time}"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    cat "$active"
+
+    # Show hint when the file has no real key/value lines (comments/blank only)
+    if ! grep -qE '^[^#[:space:]].*=' "$active" 2> /dev/null; then
+        echo ""
+        echo "（配置文件尚无配置项，可通过 'easywork config edit' 编辑添加）"
     fi
 }
 
 config_edit() {
-    if ! config_exists; then
-        config_init
-    fi
+    _ensure_config_toml
     local editor="${EDITOR:-}"
     if [[ -z "$editor" ]]; then
         for e in vim nano vi; do
@@ -632,7 +991,7 @@ config_edit() {
         log_error "未找到编辑器，请设置 \$EDITOR 环境变量"
         return 1
     fi
-    if ! "$editor" "$(config_path)"; then
+    if ! "$editor" "$(ew_config_path)"; then
         # Editor exited non-zero (e.g. :cq in vim) — ignore, not a fatal error
         :
     fi
@@ -829,7 +1188,7 @@ cleanup_on_interrupt() {
         rm -f -- $TEMP_FILES
     fi
     # Safety net: clean common tmp patterns for this PID
-    rm -f "${HOME}/.easywork"*.tmp."$$" 2> /dev/null || true
+    rm -f "${EASYWORK_HOME}/"*.tmp."$$" 2> /dev/null || true
     rm -f "${TMPDIR:-/tmp}/easywork"*.tmp."$$" 2> /dev/null || true
     exit $EXIT_INTERRUPT
 }
@@ -909,6 +1268,17 @@ _escape_sed_replacement() {
         -e 's/&/\\&/g' \
         -e 's/\//\\\//g' \
         <<< "$1"
+}
+
+# Escape a string for embedding inside a JSON double-quoted string.
+json_escape() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
 }
 
 # ─── Temp File Tracking (for signal cleanup) ──────────────────

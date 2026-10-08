@@ -5,18 +5,21 @@
 
 # ─── CLI: Install ─────────────────────────────────────────────
 cmd_install() {
-    local target="${1:-}"
+    local targets=("$@")
 
-    # Validate target module if specified
-    if [[ -n "$target" ]]; then
+    # Validate target modules if specified
+    if [[ ${#targets[@]} -gt 0 ]]; then
         _discover_modules "$LIB_DIR"
-        if ! module_registered "$target"; then
-            log_error "未知组件: $target"
-            echo ""
-            log_info "可用组件:"
-            list_modules
-            return $EXIT_ERROR
-        fi
+        local t
+        for t in "${targets[@]}"; do
+            if ! module_registered "$t"; then
+                log_error "未知组件: $t"
+                echo ""
+                log_info "可用组件:"
+                list_modules
+                return $EXIT_ERROR
+            fi
+        done
     fi
 
     echo ""
@@ -81,7 +84,7 @@ cmd_install() {
             log_info "已安装 ${EASYWORK_VERSION}${EASYWORK_CHANNEL:+ (${EASYWORK_CHANNEL})}，配置已是最新"
             if $IS_PIPED; then
                 :
-            elif [[ -n "$target" ]]; then
+            elif [[ ${#targets[@]} -gt 0 ]]; then
                 :
             elif [[ "${YES_MODE:-false}" != "true" ]]; then
                 local answer
@@ -109,8 +112,14 @@ cmd_install() {
 
         local failed_modules=()
         for name in $sorted; do
-            # Filter by target if specified
-            [[ -n "$target" && "$name" != "$target" ]] && continue
+            # Filter by targets if specified
+            if [[ ${#targets[@]} -gt 0 ]]; then
+                local matched=false t
+                for t in "${targets[@]}"; do
+                    [[ "$name" == "$t" ]] && matched=true
+                done
+                $matched || continue
+            fi
             echo ""
             log_info "配置 ${name}..."
             # Re-source module file so the correct module_install is in scope
@@ -174,6 +183,8 @@ cmd_install() {
         if [[ -n "${install_path:-}" ]]; then
             if safe_download "${EASYWORK_RAW_URL}/bin/easywork" "$install_path" 2> /dev/null; then
                 chmod +x "$install_path"
+                # Create short alias 'ew' in the same directory
+                ln -sf "$(basename "$install_path")" "$(dirname "$install_path")/ew" 2> /dev/null || true
                 if ! echo ":$PATH:" | grep -q ":$(dirname "$install_path"):"; then
                     log_warn "$(dirname "$install_path") 不在 \$PATH 中"
                     log_info "请添加以下行到你的 shell 配置: export PATH=\"$(dirname "$install_path"):\$PATH\""
@@ -294,7 +305,7 @@ _finalize_uninstall() {
         fi
 
         if [[ "$answer" =~ ^[Nn] ]]; then
-            rm -f "$(config_path)"
+            rm -f "$(ew_config_path)" "$(ew_legacy_config)"
             manifest_clear
             log_success "EasyWork 已完全移除 ✓"
         else

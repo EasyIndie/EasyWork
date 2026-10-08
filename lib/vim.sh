@@ -10,6 +10,11 @@ MODULE_PRIORITY=30
 VIMRC_FILE="$HOME/.vimrc"
 VIM_DIR="$HOME/.vim"
 
+# Declarative file target for the engine
+MODULE_DECLARE=(
+    "$VIMRC_FILE|_generate_vimrc|\"|vimrc_backup"
+)
+
 module_check() {
     [[ -f "$VIMRC_FILE" ]] && grep -qF "EasyWork managed section" "$VIMRC_FILE" 2> /dev/null
 }
@@ -280,17 +285,12 @@ module_install() {
         return $EXIT_ERROR
     }
 
-    # Backup existing vimrc (if not managed by easywork)
-    local bak
-    if [[ -f "$VIMRC_FILE" ]] && ! grep -qF "EasyWork managed section" "$VIMRC_FILE" 2> /dev/null; then
-        bak="$(backup_file "$VIMRC_FILE")"
-        log_info "已备份现有 ~/.vimrc → ${bak}"
+    # Backup existing vimrc + write managed section (via engine)
+    local vimrc_backup=""
+    apply_module_files || return $EXIT_ERROR
+    if [[ -n "$vimrc_backup" ]]; then
+        log_info "已备份现有 ~/.vimrc → ${vimrc_backup}"
     fi
-
-    # Generate vim config
-    local config_content
-    config_content="$(_generate_vimrc)"
-    replace_managed_section "$VIMRC_FILE" "$EASYWORK_VERSION" "$config_content" '"'
     log_success "已生成: $VIMRC_FILE"
 
     # Create undo directory
@@ -311,7 +311,7 @@ module_install() {
     manifest_set_section "vim" \
         "installed=true" \
         "vimrc_file=${VIMRC_FILE}" \
-        "${bak:+vimrc_backup=${bak}}" \
+        "${vimrc_backup:+vimrc_backup=${vimrc_backup}}" \
         "plug_dir_created=${VIM_DIR}"
 
     log_success "Vim IDE 配置完成 ✓"
@@ -326,51 +326,22 @@ module_uninstall() {
         return 0
     fi
 
-    # Restore backup
+    # Restore backup or remove managed section
     local bak_file
-    bak_file="$(manifest_read_section_key 'vim' 'vimrc_backup')"
+    bak_file="$(manifest_read_section_key 'vim' 'vimrc_backup' '')"
     if [[ -n "$bak_file" ]] && [[ -f "$bak_file" ]]; then
         local answer="y"
         if [[ "${YES_MODE:-false}" != "true" ]]; then
             read -r -p "  恢复备份的 ~/.vimrc？[Y/n] " answer
         fi
         if [[ ! "$answer" =~ ^[Nn] ]]; then
-            if restore_backup "$bak_file" "$VIMRC_FILE"; then
-                log_success "已恢复备份的 ~/.vimrc"
-            fi
+            remove_managed_file "$VIMRC_FILE" "$bak_file"
+            log_success "已恢复备份的 ~/.vimrc"
         fi
     else
-        # Remove managed section
         if [[ -f "$VIMRC_FILE" ]] && grep -qF "EasyWork managed section" "$VIMRC_FILE" 2> /dev/null; then
-            # Remove managed section, preserve user content outside markers
-            local tmpfile="${VIMRC_FILE}.tmp.$$"
-            local in_section=false
-            local had_content=false
-            while IFS= read -r line; do
-                if [[ "$line" =~ "EasyWork managed section begin" ]]; then
-                    in_section=true
-                    had_content=true
-                    continue
-                fi
-                if $in_section && [[ "$line" =~ "EasyWork managed section end" ]]; then
-                    in_section=false
-                    continue
-                fi
-                if ! $in_section; then
-                    printf '%s\n' "$line" >> "$tmpfile"
-                fi
-            done < "$VIMRC_FILE"
-            # Guard against missing end marker: if still in section at EOF,
-            # the file is malformed — keep original and warn
-            if $in_section; then
-                log_warn "检测到不完整的 EasyWork 标记段，跳过修改"
-                rm -f "$tmpfile"
-            elif $had_content; then
-                mv "$tmpfile" "$VIMRC_FILE"
-                log_success "已移除 EasyWork Vim 配置"
-            else
-                rm -f "$tmpfile"
-            fi
+            remove_managed_file "$VIMRC_FILE" ""
+            log_success "已移除 EasyWork Vim 配置"
         fi
     fi
 

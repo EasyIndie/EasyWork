@@ -57,7 +57,8 @@ _setup_completions() {
         return 0
     fi
 
-    local comp_dir="$HOME/.easywork/completions"
+    local comp_dir
+    comp_dir="$(ew_completions_dir)"
     mkdir -p "$comp_dir"
 
     # Build dynamic command list: built-in + registered modules
@@ -103,6 +104,7 @@ _easywork() {
     esac
 }
 complete -F _easywork easywork
+complete -F _easywork ew
 BASH_COMP
 
     # ── Zsh completion — explicit compdef registration (sourced directly) ──
@@ -140,6 +142,7 @@ _easywork() {
 # Register explicitly — this file is sourced directly, not autoloaded via fpath
 if typeset -f compdef > /dev/null 2>&1; then
     compdef _easywork easywork
+    compdef _easywork ew
 fi
 ZSH_COMP
 
@@ -173,7 +176,8 @@ _remove_completions() {
         return 0
     fi
 
-    local comp_dir="$HOME/.easywork/completions"
+    local comp_dir
+    comp_dir="$(ew_completions_dir)"
     local sh_type rc_file tmpfile
 
     # Remove completion source lines from all detected rc files
@@ -203,7 +207,8 @@ cmd_completion() {
             log_success "Shell 补全已移除"
             ;;
         status | show)
-            local comp_dir="$HOME/.easywork/completions"
+            local comp_dir
+            comp_dir="$(ew_completions_dir)"
             echo "补全文件目录: ${comp_dir}"
             echo ""
             if [[ -f "$comp_dir/easywork.bash" ]]; then

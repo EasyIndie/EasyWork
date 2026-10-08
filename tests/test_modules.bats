@@ -37,14 +37,32 @@ teardown() { teardown_mocks; }
     [[ "$rc" == "$HOME/"* ]]
 }
 
-@test "module: shell: _generate_shell_config has expected content" {
+@test "module: shell: _generate_shell_config is layered" {
     source "${EASYWORK_ROOT}/lib/shell.sh"
     local content
     content="$(_generate_shell_config)"
-    # Check for key markers that are always present in generated config
+    # Always present
     [[ "$content" =~ "LC_ALL=en_US.UTF-8" ]]
     [[ "$content" =~ "BLACK=\$'\\e[30m'" ]]
+    [[ "$content" =~ "run()" ]]
+    # Aliases are on by default
+    [[ "$content" =~ "alias g='git'" ]]
+    # Fancy prompt is off by default
+    [[ ! "$content" =~ "git-branch-name()" ]]
+}
+
+@test "module: shell: enable_fancy_prompt adds prompt helpers" {
+    source "${EASYWORK_ROOT}/lib/shell.sh"
+    mkdir -p "$(dirname "$(ew_config_path)")"
+    cat > "$(ew_config_path)" << 'EOF'
+schema_version = 1
+[shell]
+enable_fancy_prompt = true
+EOF
+    local content
+    content="$(_generate_shell_config)"
     [[ "$content" =~ "git-branch-name()" ]]
+    [[ "$content" =~ "PROMPT=" ]]
 }
 
 @test "module: shell: dry-run install does not create files" {

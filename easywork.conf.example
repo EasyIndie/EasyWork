@@ -1,22 +1,32 @@
-# ── EasyWork 配置文件 ────────────────────────────────────
-# 复制为 ~/.easywork/config 即可生效：
-#   cp easywork.conf.example ~/.easywork/config
+# ── EasyWork 配置示例（v2）────────────────────────────────
+# EasyWork 的配置文件位于 ~/.easywork/config.toml
+# 用命令管理：
+#   easywork config                查看当前配置
+#   easywork config get <键>       读取
+#   easywork config set <键> <值>  写入
+#   easywork config edit           编辑
 #
-# 配置文件由 easywork config 命令管理，支持：
-#   easywork config        查看配置内容
-#   easywork config edit   编辑配置文件
-#
-# ── Git 身份配置 ─────────────────────────────────────────
-# 运行 easywork git 时，可选择 personal 或 work 身份。
-# 以下变量会被读取，设置后无需每次重新输入。
-#
-# 个人身份
-GIT_PERSONAL_NAME=""
-GIT_PERSONAL_EMAIL=""
-#
-# 工作身份
-GIT_WORK_NAME=""
-GIT_WORK_EMAIL=""
+# 旧版 ~/.easywork/config（ini）会在首次 install / config edit 时自动迁移。
 
-# ── 其他配置 ────────────────────────────────────────────
-# （暂无其他配置项，后续版本可能扩展）
+schema_version = 1
+
+[shell]
+enable_aliases      = true    # 安全别名（默认开）
+enable_fancy_prompt = false   # 花哨提示符（含 Git 分支），默认关
+enable_ohmyzsh      = false   # Oh My Zsh，默认关
+enable_net_tools    = false   # macOS 网络/VPN 工具函数，默认关
+
+[git]
+identity = "personal"         # personal | work | custom
+scope    = "global"           # global | local
+
+[git.identities.personal]
+name  = ""
+email = ""
+
+[git.identities.work]
+name  = ""
+email = ""
+
+[vim]
+enabled = true

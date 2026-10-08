@@ -98,6 +98,11 @@ WHITE=$'\e[37m'
 RESET=$'\e[0m'
 
 export CLICOLOR=1
+SHELLCONF
+
+    # ── Fancy prompt (opt-in) ──
+    if [[ "$(cfg_get_bool shell.enable_fancy_prompt false)" == "true" ]]; then
+        cat << 'SHELLCONF'
 
 # ── Git Prompt Helpers ──
 git-branch-name() {
@@ -120,6 +125,13 @@ else
     PS1='\n{\\__/}\n(● .●)\n/ >>> \[${CYAN}\]\u@\h:\w\[${RESET}\] \[${GREEN}\]$(git-branch-prompt)\[${RESET}\]\n\$ '
 fi
 
+SHELLCONF
+    fi
+
+    # ── Aliases (default on) ──
+    if [[ "$(cfg_get_bool shell.enable_aliases true)" == "true" ]]; then
+        cat << 'SHELLCONF'
+
 # ── System Aliases ──
 alias grep='grep --color=auto'
 alias mv='mv -i'
@@ -138,13 +150,21 @@ alias fs='ffserver'
 
 # ── Swift Package Manager ──
 alias spm='swift package'
+SHELLCONF
+    fi
 
-# ── Utility: Repeat command N times ──
+    # ── Utility: Repeat command N times ──
+    cat << 'SHELLCONF'
 run() {
     local number="$1"
     shift
     for ((n = 0; n < number; n++)); do "$@"; done
 }
+SHELLCONF
+
+    # ── macOS network/VPN tools (opt-in) ──
+    if [[ "$(cfg_get_bool shell.enable_net_tools false)" == "true" ]]; then
+        cat << 'SHELLCONF'
 
 # ── Utility: Flush DNS cache (macOS) ──
 flushdns() {
@@ -212,6 +232,7 @@ sys_info() {
     system_profiler SPHardwareDataType SPSoftwareDataType 2>/dev/null || echo "Only available on macOS"
 }
 SHELLCONF
+    fi
 }
 
 # ─── Module: Install ──────────────────────────────────────────
@@ -226,9 +247,9 @@ module_install() {
     log_info "系统: $os_type, Shell: $sh_type"
     log_info "Shell 配置文件: $rc_file"
 
-    # Install Oh My Zsh on zsh (both macOS and Linux)
+    # Install Oh My Zsh on zsh, only when explicitly enabled (opt-in)
     # Note: CHSH=no prevents automatic default shell switch, safe for all platforms
-    if [[ "$sh_type" == "zsh" ]]; then
+    if [[ "$sh_type" == "zsh" ]] && [[ "$(cfg_get_bool shell.enable_ohmyzsh false)" == "true" ]]; then
         _install_ohmyzsh
     fi
 

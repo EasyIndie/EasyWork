@@ -91,12 +91,12 @@ teardown() { teardown_mocks; }
     [[ "$output" =~ ".easywork/config" ]]
 }
 
-@test "unit: config_init creates config" {
-    rm -f "$CONFIG_FILE"
+@test "unit: config_init creates config.toml" {
+    rm -f "$(ew_config_path)" "$(ew_legacy_config)"
     config_init
-    [[ -f "$CONFIG_FILE" ]]
+    [[ -f "$(ew_config_path)" ]]
     # Should NOT contain git placeholder values
-    run cat "$CONFIG_FILE"
+    run cat "$(ew_config_path)"
     [[ ! "$output" =~ "Your Name" ]]
 }
 
@@ -106,15 +106,18 @@ teardown() { teardown_mocks; }
     [[ "${TEST_VAR:-}" == "loaded_value" ]]
 }
 
-@test "unit: _save_config_var writes and updates" {
-    rm -f "$CONFIG_FILE"
-    _save_config_var "git" "GIT_PERSONAL_NAME" "Alice"
-    _save_config_var "git" "GIT_PERSONAL_EMAIL" "a@b.com"
-    _save_config_var "git" "GIT_PERSONAL_NAME" "Alice2"
-    run cat "$CONFIG_FILE"
-    [[ "$output" =~ "## git" ]]
-    [[ "$output" =~ 'GIT_PERSONAL_NAME="Alice2"' ]]
-    [[ "$output" =~ 'GIT_PERSONAL_EMAIL="a@b.com"' ]]
+@test "unit: config_load reads config.toml into shell vars" {
+    rm -f "$(ew_legacy_config)"
+    mkdir -p "$(dirname "$(ew_config_path)")"
+    cat > "$(ew_config_path)" << 'EOF'
+schema_version = 1
+[git.identities.personal]
+name  = "Alice"
+email = "alice@example.com"
+EOF
+    config_load
+    [[ "$GIT_PERSONAL_NAME" == "Alice" ]]
+    [[ "$GIT_PERSONAL_EMAIL" == "alice@example.com" ]]
 }
 
 # ── Manifest ─────────────────────────────────────────────────
@@ -692,4 +695,164 @@ _sv() {
     export -f has_cmd 2> /dev/null || true
     run preflight_check
     [[ "$status" -eq 0 ]]
+}
+
+# ── State paths (EASYWORK_HOME) ──────────────────────────────
+
+@test "unit: ew_* paths derive from EASYWORK_HOME" {
+    [[ "$(ew_home)" == "${HOME}/.easywork" ]]
+    [[ "$(ew_config_path)" == "${HOME}/.easywork/config.toml" ]]
+    [[ "$(ew_manifest_path)" == "${HOME}/.easywork/manifest" ]]
+    [[ "$(ew_legacy_config)" == "${HOME}/.easywork/config" ]]
+    [[ "$(ew_completions_dir)" == "${HOME}/.easywork/completions" ]]
+    [[ "$(ew_lib_cache)" == "${HOME}/.easywork/lib/v${EASYWORK_VERSION}" ]]
+}
+
+@test "unit: ew_config_path respects EASYWORK_HOME override" {
+    local out
+    out="$(EASYWORK_HOME=/custom/state ew_config_path)"
+    [[ "$out" == "/custom/state/config.toml" ]]
+}
+
+@test "unit: manifest_init writes schema_version=1" {
+    manifest_init "1.0.0"
+    [[ "$(manifest_get_schema_version)" == "1" ]]
+}
+
+# ── config.toml accessors ─────────────────────────────────────
+
+@test "unit: cfg_get reads scalar and dotted-section values" {
+    mkdir -p "$(dirname "$(ew_config_path)")"
+    cat > "$(ew_config_path)" << 'EOF'
+schema_version = 1
+
+[shell]
+enable_aliases = true
+enable_ohmyzsh = false   # inline comment
+
+[git.identities.personal]
+name  = "张三"
+email = "zhangsan@example.com"
+EOF
+    [[ "$(cfg_get schema_version)" == "1" ]]
+    [[ "$(cfg_get shell.enable_aliases)" == "true" ]]
+    [[ "$(cfg_get shell.enable_ohmyzsh)" == "false" ]]
+    [[ "$(cfg_get git.identities.personal.name)" == "张三" ]]
+    [[ "$(cfg_get git.identities.personal.email)" == "zhangsan@example.com" ]]
+    [[ "$(cfg_get missing.key 'fallback')" == "fallback" ]]
+}
+
+@test "unit: cfg_get_bool normalizes values" {
+    mkdir -p "$(dirname "$(ew_config_path)")"
+    cat > "$(ew_config_path)" << 'EOF'
+[shell]
+a = true
+b = 1
+c = yes
+d = off
+e = maybe
+EOF
+    [[ "$(cfg_get_bool shell.a)" == "true" ]]
+    [[ "$(cfg_get_bool shell.b)" == "true" ]]
+    [[ "$(cfg_get_bool shell.c)" == "true" ]]
+    [[ "$(cfg_get_bool shell.d)" == "false" ]]
+    [[ "$(cfg_get_bool shell.e false)" == "false" ]]
+}
+
+@test "unit: cfg_valid accepts schema_version 1 and rejects others" {
+    mkdir -p "$(dirname "$(ew_config_path)")"
+    printf 'schema_version = 1\n' > "$(ew_config_path)"
+    run cfg_valid
+    [[ "$status" -eq 0 ]]
+    printf 'schema_version = 99\n' > "$(ew_config_path)"
+    run cfg_valid
+    [[ "$status" -ne 0 ]]
+}
+
+@test "unit: config_migrate converts legacy ini to config.toml" {
+    rm -f "$(ew_config_path)"
+    mkdir -p "$(dirname "$(ew_legacy_config)")"
+    cat > "$(ew_legacy_config)" << 'EOF'
+GIT_PERSONAL_NAME="张三"
+GIT_PERSONAL_EMAIL="zhangsan@example.com"
+GIT_WORK_NAME="San Zhang"
+GIT_WORK_EMAIL="san@company.com"
+EOF
+    run config_migrate
+    [[ "$status" -eq 0 ]]
+    [[ -f "$(ew_config_path)" ]]
+    [[ "$(cfg_get git.identities.personal.name)" == "张三" ]]
+    [[ "$(cfg_get git.identities.work.email)" == "san@company.com" ]]
+}
+
+# ── JSON helpers ──────────────────────────────────────────────
+
+@test "unit: json_escape escapes quotes, backslashes, newlines" {
+    [[ "$(json_escape 'a"b')" == 'a\"b' ]]
+    [[ "$(json_escape 'a\b')" == 'a\\b' ]]
+    [[ "$(json_escape $'line1\nline2')" == 'line1\nline2' ]]
+    [[ "$(json_escape 'plain')" == 'plain' ]]
+}
+
+# ── Managed file engine ──────────────────────────────────────
+
+@test "unit: manifest_module_state returns absent/true" {
+    rm -f "$MANIFEST_FILE"
+    [[ "$(manifest_module_state foo)" == "absent" ]]
+    manifest_init "1.0.0"
+    manifest_set_section "foo" "installed=true"
+    [[ "$(manifest_module_state foo)" == "true" ]]
+    [[ "$(manifest_module_state bar)" == "absent" ]]
+}
+
+@test "unit: apply_managed_file writes idempotently and backs up" {
+    local target="${TEST_HOME}/.testcfg"
+    echo "user content" > "$target"
+    local bak=""
+    apply_managed_file "$target" "generated line" "#" bak
+    [[ -n "$bak" ]]
+    [[ -f "$bak" ]]
+    grep -qF "user content" "$target"
+    grep -qF "generated line" "$target"
+    grep -qF "EasyWork managed section begin" "$target"
+    # Second apply: no new backup, single managed block
+    local bak2=""
+    apply_managed_file "$target" "generated v2" "#" bak2
+    [[ -z "$bak2" ]]
+    [[ "$(grep -cF 'managed section begin' "$target")" -eq 1 ]]
+    grep -qF "generated v2" "$target"
+}
+
+@test "unit: remove_managed_file removes section and restores backup" {
+    local target="${TEST_HOME}/.testcfg2"
+    echo "original" > "$target"
+    local bak=""
+    apply_managed_file "$target" "managed" "#" bak
+    remove_managed_file "$target" "$bak"
+    [[ "$(cat "$target")" == "original" ]]
+}
+
+@test "unit: remove_managed_section preserves user content" {
+    local target="${TEST_HOME}/.testcfg3"
+    {
+        echo "user1"
+        echo "# >>> EasyWork managed section begin (v1) >>>"
+        echo "managed"
+        echo "# <<< EasyWork managed section end <<<"
+        echo "user2"
+    } > "$target"
+    remove_managed_section "$target"
+    grep -qF "user1" "$target"
+    grep -qF "user2" "$target"
+    ! grep -qF "^managed$" "$target"
+}
+
+@test "unit: cfg_set upserts and preserves other keys" {
+    rm -f "$(ew_config_path)"
+    cfg_set "git.identities.personal.name" "张三"
+    cfg_set "git.identities.personal.email" "z@example.com"
+    cfg_set "git.identities.personal.name" "李四"
+    [[ "$(cfg_get git.identities.personal.name)" == "李四" ]]
+    [[ "$(cfg_get git.identities.personal.email)" == "z@example.com" ]]
+    [[ "$(cfg_get schema_version)" == "1" ]]
 }

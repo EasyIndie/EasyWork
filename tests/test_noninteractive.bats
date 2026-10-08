@@ -46,6 +46,22 @@ EOF
     [[ "$status" -eq 0 ]]
 }
 
+@test "noninteractive: git installs aliases without identity (no blocking)" {
+    source "${EASYWORK_ROOT}/lib/git.sh"
+    YES_MODE=true
+    DRY_RUN=false
+    unset GIT_PERSONAL_NAME GIT_PERSONAL_EMAIL GIT_WORK_NAME GIT_WORK_EMAIL
+    echo "# empty" > "$CONFIG_FILE"
+    config_load
+    run module_install
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ "跳过" ]]
+    # Aliases are still written even without a configured identity
+    [[ -f "$GIT_CONFIG_FILE" ]]
+    grep -qF "EasyWork managed section" "$GIT_CONFIG_FILE"
+    ! grep -qF "[user]" "$GIT_CONFIG_FILE"
+}
+
 # ── --verbose flag ──────────────────────────────────────────
 
 @test "noninteractive: VERBOSE mode does not crash" {

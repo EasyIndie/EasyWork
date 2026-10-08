@@ -313,3 +313,67 @@ FAIL_CURL
     run easywork completion status
     [[ ! "$output" =~ "✓" ]]
 }
+
+# ─── J: --json output ───────────────────────────────────────
+
+@test "e2e: version --json emits structured output" {
+    run easywork version --json
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ '"command":"version"' ]]
+    [[ "$output" =~ '"version":"0.0.1"' ]]
+    [[ "$output" =~ '"error":null' ]]
+}
+
+@test "e2e: list --json emits module array" {
+    run easywork list --json
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ '"command":"list"' ]]
+    [[ "$output" =~ '"name":"shell"' ]]
+    [[ "$output" =~ '"name":"git"' ]]
+}
+
+@test "e2e: list (human) shows modules" {
+    run easywork list
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ "shell" ]]
+    [[ "$output" =~ "git" ]]
+}
+
+# ─── K: status / doctor / init ───────────────────────────
+
+@test "e2e: status (human) runs" {
+    run easywork status
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ "组件状态" ]]
+}
+
+@test "e2e: status --json emits modules" {
+    run easywork status --json
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ '"command":"status"' ]]
+    [[ "$output" =~ '"name":"shell"' ]]
+}
+
+@test "e2e: doctor --json emits checks" {
+    run easywork doctor --json
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ '"command":"doctor"' ]]
+    [[ "$output" =~ '"name":"curl"' ]]
+}
+
+@test "e2e: init installs shell and git without vim" {
+    run easywork init
+    [[ "$status" -eq 0 ]]
+    run cat "$TEST_HOME/.easywork/manifest"
+    [[ "$output" =~ "shell" ]]
+    [[ "$output" =~ "git" ]]
+    [[ ! "$output" =~ "\[vim\]" ]]
+}
+
+@test "e2e: config set/get round-trips to config.toml" {
+    run easywork config set git.identities.personal.name "Test User"
+    [[ "$status" -eq 0 ]]
+    run easywork config get git.identities.personal.name
+    [[ "$output" == "Test User" ]]
+    [[ -f "$TEST_HOME/.easywork/config.toml" ]]
+}

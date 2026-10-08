@@ -53,14 +53,14 @@ dry-run: ## Preview what easywork install would do
 install: ## Install CLI to /usr/local/bin (requires sudo)
 	@echo "==> Installing easywork..."
 	@if [ -w /usr/local/bin ]; then \
-		cp bin/easywork /usr/local/bin/easywork && chmod +x /usr/local/bin/easywork; \
+		cp bin/easywork /usr/local/bin/easywork && chmod +x /usr/local/bin/easywork && ln -sf easywork /usr/local/bin/ew; \
 	elif [ -d "$$HOME/.local/bin" ] || mkdir -p "$$HOME/.local/bin" 2>/dev/null; then \
-		cp bin/easywork "$$HOME/.local/bin/easywork" && chmod +x "$$HOME/.local/bin/easywork"; \
+		cp bin/easywork "$$HOME/.local/bin/easywork" && chmod +x "$$HOME/.local/bin/easywork" && ln -sf easywork "$$HOME/.local/bin/ew"; \
 	else \
 		echo "Cannot install. Please copy bin/easywork to a directory in your PATH manually."; \
 		exit 1; \
 	fi
-	@echo "✅ easywork installed. Run: easywork help"
+	@echo "✅ easywork installed (short alias: ew). Run: ew help"
 
 clean: ## Remove temporary files
 	rm -f *.tmp *.bak
