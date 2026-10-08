@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/EasyIndie/EasyWork/actions/workflows/ci.yml/badge.svg)](https://github.com/EasyIndie/EasyWork/actions/workflows/ci.yml)
 [![Release](https://github.com/EasyIndie/EasyWork/actions/workflows/release.yml/badge.svg)](https://github.com/EasyIndie/EasyWork/actions/workflows/release.yml)
+[![Version](https://img.shields.io/github/v/release/EasyIndie/EasyWork)](https://github.com/EasyIndie/EasyWork/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **一条命令，配置好你的开发环境。** 纯 Bash，零运行时依赖，macOS / Linux 通用。
@@ -11,8 +12,8 @@
 ## 快速开始
 
 ```bash
-# 安装 CLI（同时创建短命令 ew）
-curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bin/easywork | bash
+# 安装 CLI（始终取最新 release；同时创建短命令 ew）
+curl -sL https://github.com/EasyIndie/EasyWork/releases/latest/download/easywork | bash
 
 # 轻量初始化：Shell 别名 + Git 别名，零交互、零重依赖
 ew init
@@ -186,7 +187,7 @@ make test     # 运行测试
 make dry-run  # 预览安装
 ```
 
-需要 ShellCheck、shfmt、BATS。AI 编码代理请先阅读 [AGENTS.md](AGENTS.md)；架构与 v2 蓝图见 [DESIGN.md](DESIGN.md)。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+需要 ShellCheck、shfmt、BATS。AI 编码代理请先阅读 [AGENTS.md](AGENTS.md)；架构与 v2 蓝图见 [DESIGN.md](DESIGN.md)；版本历史见 [CHANGELOG.md](CHANGELOG.md)。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 
