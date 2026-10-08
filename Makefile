@@ -17,11 +17,10 @@ else
 	$(error "shellcheck not found. Install: brew install shellcheck or apt install shellcheck")
 endif
 
-test: ## Run BATS tests
+test: ## Run BATS tests (parallel across files; JOBS=N to override)
 	@echo "==> Running tests..."
 ifdef BATS
-	$(BATS) tests/ --recursive
-	@echo "✅ Tests passed"
+	BATS="$(BATS)" tests/run.sh && echo "✅ Tests passed"
 else
 	$(error "bats not found. Install: brew install bats-core or see https://github.com/bats-core/bats-core")
 endif

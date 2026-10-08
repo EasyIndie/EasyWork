@@ -87,7 +87,7 @@ jobs:
 
       - name: Run Tests
         shell: bash
-        run: bats tests/ --recursive
+        run: tests/run.sh
 
       - name: Dry-run Install
         shell: bash

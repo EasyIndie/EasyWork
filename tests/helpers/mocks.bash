@@ -2,10 +2,6 @@
 # EasyWork — Test Helpers & Mocks
 
 # ── Setup / Teardown ─────────────────────────────────────────
-# Override HOME to a temp directory so tests don't touch real config
-export TEST_HOME="${BATS_TMPDIR:-/tmp}/easywork_test_home"
-export HOME="${TEST_HOME}"
-
 # EasyWork variables expected by modules
 export EASYWORK_VERSION="1.0.0"
 export DRY_RUN=false
@@ -15,6 +11,11 @@ export VERBOSE=false
 # Mock functions that modules call but tests shouldn't execute
 # shellcheck disable=SC2329  # mock functions are invoked via export -f in subprocesses
 setup_mocks() {
+    # Unique temp HOME per test: keeps tests isolated and makes parallel
+    # execution (across files) safe.
+    TEST_HOME="$(mktemp -d "${BATS_TMPDIR:-/tmp}/easywork.XXXXXX")"
+    export TEST_HOME
+    export HOME="${TEST_HOME}"
     mkdir -p "${TEST_HOME}"
 
     # Override manifest and config paths

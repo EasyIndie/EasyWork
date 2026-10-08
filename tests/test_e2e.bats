@@ -7,6 +7,8 @@ setup() {
     TEST_HOME="$(mktemp -d)"
     export HOME="$TEST_HOME"
     mkdir -p "$TEST_HOME/.local/bin"
+    export TMPDIR="$TEST_HOME/tmp"
+    mkdir -p "$TMPDIR"
 
     # Create mock wrapper that replaces curl to serve from local repo
     cat > "$TEST_HOME/.local/bin/curl" << MOCK_CURL

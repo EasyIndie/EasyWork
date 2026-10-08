@@ -85,8 +85,11 @@ DESIGN.md          # v2 蓝图（5 契约 + 人机体验 + 命令名）
 
 ## 8. 测试约定
 
+- `make test` 通过 `tests/run.sh` **并行**运行各测试文件（默认并发=CPU 核数，`JOBS=N` 可覆盖）；
+  每个用例使用唯一的 `$TEST_HOME`（`mktemp -d`）以保证隔离与并行安全
 - `tests/helpers/mocks.bash` 把 `HOME` 指到临时目录，并 mock 了
   `curl/git/vim/brew/sudo/node/networksetup/scutil`，测试不得发起真实网络请求或改动真实 `$HOME`
+- 测试 setup 将 stdin 重定向到 `/dev/null`，避免从终端运行 `make test` 时继承 tty 而阻塞
 - 模块变量（`MANIFEST_FILE`/`CONFIG_FILE`/`SH_CONFIG_FILE` 等）在 setup_mocks 中被 export 覆盖
 - 新增测试时遵循现有 `@test` 命名规范（见各 .bats 文件头）
 
