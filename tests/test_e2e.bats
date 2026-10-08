@@ -2,6 +2,8 @@
 # E2E tests: real user flows with standalone binary simulation
 
 EASYWORK_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+# Derive the binary's version so assertions don't hardcode it across releases.
+EASYWORK_BIN_VERSION="$(sed -n 's/^EASYWORK_VERSION="\(.*\)"/\1/p' "${EASYWORK_ROOT}/bin/easywork" | head -1)"
 
 setup() {
     TEST_HOME="$(mktemp -d)"
@@ -83,7 +85,7 @@ teardown() {
     run easywork version
     [[ "$status" -eq 0 ]]
     [[ "$output" =~ "EasyWork" ]]
-    [[ -f "$TEST_HOME/.easywork/lib/v0.0.1/common.sh" ]]
+    [[ -f "$TEST_HOME/.easywork/lib/v${EASYWORK_BIN_VERSION}/common.sh" ]]
 }
 
 @test "e2e: standalone binary help lists modules" {
@@ -325,7 +327,7 @@ FAIL_CURL
     run easywork version --json
     [[ "$status" -eq 0 ]]
     [[ "$output" =~ '"command":"version"' ]]
-    [[ "$output" =~ '"version":"0.0.1"' ]]
+    [[ "$output" =~ "\"version\":\"${EASYWORK_BIN_VERSION}\"" ]]
     [[ "$output" =~ '"error":null' ]]
 }
 
