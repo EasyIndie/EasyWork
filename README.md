@@ -92,6 +92,7 @@ NERDTree、Airline、fzf、coc.nvim、ALE、Markdown 预览、Git 集成等。
 ### GitHub CLI (gh)
 
 自动安装官方 GitHub CLI，便于在终端完成 PR / issue / release / actions 操作。
+旧发行版（默认源无 gh 时）会自动添加 GitHub 官方 apt/dnf 源。
 
 ### AI 工具 (ai-tools)
 

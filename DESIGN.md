@@ -452,7 +452,7 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 
 | 模块 | 作用 | 安装方式 |
 |---|---|---|
-| `gh` | 安装 GitHub CLI | brew / apt / dnf / yum / pacman / zypper / apk；失败给官方指引 |
+| `gh` | 安装 GitHub CLI | brew / apt / dnf / yum / pacman / zypper / apk；apt/dnf/yum 默认源缺失时**自动添加 GitHub 官方源**；其余失败给指引 |
 | `ai-tools` | 自动安装 **pi / codex / claude code** | 经 **npm**（三个都有 npm 包）；缺 npm 时给官方指引 |
 
 ### 明确不做（需要时再单独加）

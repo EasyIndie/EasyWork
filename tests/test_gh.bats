@@ -66,3 +66,49 @@ teardown() { teardown_mocks; }
     [[ "$status" -eq 0 ]]
     [[ "$output" =~ "离线模式" ]]
 }
+
+@test "module: gh: apt default succeeds without adding repo" {
+    function has_cmd() { [[ "$1" != "gh" ]]; }
+    function detect_pkg_manager() { echo "apt-get"; }
+    function sudo() { return 0; }
+    run module_install
+    [[ "$status" -eq 0 ]]
+    [[ ! "$output" =~ "GitHub 官方" ]]
+}
+
+@test "module: gh: adds official apt repo on fallback" {
+    function has_cmd() { [[ "$1" != "gh" && "$1" != "wget" ]]; }
+    function detect_pkg_manager() { echo "apt-get"; }
+    function curl() {
+        : > "$3"
+        return 0
+    }
+    function dpkg() { echo amd64; }
+    # Fail the first plain install until the official source has been added
+    function sudo() {
+        if [[ "$*" == *"apt-get install"* ]] && [[ ! -f "${TEST_HOME}/ghrepo" ]]; then
+            return 1
+        fi
+        [[ "$*" == *"github-cli.list"* ]] && : > "${TEST_HOME}/ghrepo"
+        return 0
+    }
+    run module_install
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ "GitHub 官方" ]]
+}
+
+@test "module: gh: adds official dnf repo on fallback" {
+    function has_cmd() { [[ "$1" != "gh" ]]; }
+    function detect_pkg_manager() { echo "dnf"; }
+    function sudo() {
+        if [[ "$*" == *"dnf install"* ]] && [[ "$*" != *"--repo gh-cli"* ]]; then
+            [[ -f "${TEST_HOME}/ghrepo" ]] && return 0
+            return 1
+        fi
+        [[ "$*" == *"config-manager"* ]] && : > "${TEST_HOME}/ghrepo"
+        return 0
+    }
+    run module_install
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ "GitHub 官方" ]]
+}
