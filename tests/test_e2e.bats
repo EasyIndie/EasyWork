@@ -383,6 +383,14 @@ FAIL_CURL
     [[ -f "$TEST_HOME/.easywork/config.toml" ]]
 }
 
+@test "e2e: status notices a newer version" {
+    mkdir -p "$TEST_HOME/.easywork"
+    echo "easywork_version=0.0.1" > "$TEST_HOME/.easywork/manifest"
+    run easywork status
+    [[ "$status" -eq 0 ]]
+    [[ "$output" =~ "新版本 v1.0.0" ]]
+}
+
 @test "e2e: install git keeps module manifest keys" {
     mkdir -p "$TEST_HOME/.easywork"
     printf '[user]\n  name = preexisting\n' > "$TEST_HOME/.gitconfig"

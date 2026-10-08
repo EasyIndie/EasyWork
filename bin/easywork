@@ -319,6 +319,8 @@ cmd_status() {
     else
         echo "  下一步: easywork list 查看组件，easywork doctor 检查环境"
     fi
+
+    notify_if_update_available
 }
 
 _cmd_status_json() {

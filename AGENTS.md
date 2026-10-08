@@ -74,7 +74,7 @@ DESIGN.md          # v2 蓝图（5 契约 + 人机体验 + 命令名）
 - ✅ **可选模块（定稿见 DESIGN.md §11）**：新增 `gh`（自动安装 GitHub CLI）、
   `ai-tools`（自动安装 claude code / codex / pi，经 npm，离线/禁用开关可控）
 - ❌ **明确不做**：editor（GUI）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
-- 测试现状：174 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
+- 测试现状：183 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
 
 ## 7. 改动规则
 

@@ -1120,6 +1120,52 @@ _semver_is_newer() {
     [[ $? -eq 1 ]]
 }
 
+# ─── Update Check ──────────────────────────────
+# Release API (overridable for forks/mirrors; bin/easywork also sets it).
+EASYWORK_API_URL="${EASYWORK_API_URL:-https://api.github.com/repos/EasyIndie/EasyWork/releases/latest}"
+
+# Fetch the latest released version (normalized to 'vX.Y.Z'), or empty on failure.
+# Uses a short timeout so it never noticeably blocks install/status.
+_fetch_latest_version() {
+    local resp ver
+    resp="$(curl -fsSL --proto '=https' --tlsv1.2 --connect-timeout 3 --max-time 6 \
+        -H 'Accept: application/vnd.github+json' "$EASYWORK_API_URL" 2> /dev/null || true)"
+    ver="$(printf '%s' "$resp" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
+    [[ -n "$ver" ]] || return 0
+    [[ "$ver" == v* ]] || ver="v${ver}"
+    printf '%s' "$ver"
+}
+
+# Non-blocking "new version available" notice.
+# Skipped in JSON/offline mode and throttled to at most once per 24h.
+notify_if_update_available() {
+    [[ "${OFFLINE:-false}" == "true" ]] && return 0
+    [[ "${JSON_MODE:-false}" == "true" ]] && return 0
+
+    local cache="${EASYWORK_HOME}/.last_update_check"
+    local now
+    now="$(date +%s)"
+    if [[ -f "$cache" ]]; then
+        local last
+        last="$(head -1 "$cache" 2> /dev/null || echo 0)"
+        case "$last" in
+            '' | *[!0-9]*) last=0 ;;
+        esac
+        ((now - last < 86400)) && return 0
+    fi
+
+    local latest
+    latest="$(_fetch_latest_version)"
+    _ensure_easywork_home
+    printf '%s\n' "$now" > "$cache" 2> /dev/null || true
+
+    [[ -n "$latest" ]] || return 0
+    if _semver_is_newer "$latest" "$EASYWORK_VERSION"; then
+        log_info "发现新版本 ${latest}（当前 ${EASYWORK_VERSION}）: 运行 easywork update 升级"
+    fi
+    return 0
+}
+
 # ─── Concurrency Lock ─────────────────────────────────────────
 LOCK_FILE="${TMPDIR:-/tmp}/easywork.lock"
 # Use fixed fd=200 for bash 3.2 compatibility (no {varname}> auto-assignment)

@@ -204,6 +204,8 @@ cmd_install() {
         _setup_completions
     fi
 
+    notify_if_update_available
+
     release_lock
 }
 

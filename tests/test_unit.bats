@@ -857,3 +857,33 @@ EOF
     [[ "$(cfg_get git.identities.personal.email)" == "z@example.com" ]]
     [[ "$(cfg_get schema_version)" == "1" ]]
 }
+
+# ── Update notice ─────────────────────────────────────────────
+
+@test "unit: notify_if_update_available prints when newer" {
+    function curl() { echo '{"tag_name":"v9.9.9"}'; }
+    run notify_if_update_available
+    [[ "$output" =~ "新版本 v9.9.9" ]]
+}
+
+@test "unit: notify_if_update_available silent in JSON mode" {
+    function curl() { echo '{"tag_name":"v9.9.9"}'; }
+    JSON_MODE=true
+    run notify_if_update_available
+    JSON_MODE=false
+    [[ -z "$output" ]]
+}
+
+@test "unit: notify_if_update_available silent when offline" {
+    function curl() { echo '{"tag_name":"v9.9.9"}'; }
+    OFFLINE=true
+    run notify_if_update_available
+    OFFLINE=false
+    [[ -z "$output" ]]
+}
+
+@test "unit: notify_if_update_available silent when up to date" {
+    function curl() { echo '{"tag_name":"v1.0.0"}'; }
+    run notify_if_update_available
+    [[ ! "$output" =~ "新版本" ]]
+}
