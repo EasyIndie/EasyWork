@@ -58,12 +58,37 @@ ew <命令> [参数] [选项]
 
 | 全局选项 | 说明 |
 |---|---|
-| `--json` | 机器可读 JSON 输出（日志走 stderr；`version`/`status` 含 `update` 字段） |
+| `--json` | 机器可读 JSON 输出（日志走 stderr；`version`/`status`/`list`/`doctor` 含 `update` 字段） |
 | `--dry-run` | 预览变更，不执行 |
 | `--yes` `-y` | 跳过确认 |
 | `--verbose` `-v` | 详细输出 |
 | `--offline` | 禁止联网（跳过下载） |
 | `--keep-config` / `--remove-config` | 卸载时保留 / 删除配置 |
+
+### 机器可读输出（`--json`）
+
+`status` / `version` / `list` / `doctor` 支持 `--json`：stdout 为纯 JSON、日志走 stderr，便于 AI / 脚本消费。
+
+```jsonc
+// ew status --json
+{
+  "ok": true,
+  "command": "status",
+  "data": {
+    "config": { "path": "/Users/me/.easywork/config.toml", "exists": true, "valid": true },
+    "modules": [
+      { "name": "shell", "state": "true", "ok": true },
+      { "name": "git", "state": "true", "ok": true },
+      { "name": "vim", "state": "absent", "ok": false }
+    ],
+    "update": { "latest": "v1.0.0", "available": true }
+  },
+  "error": null
+}
+```
+
+每个响应都遵循 `{ "ok", "command", "data", "error" }` 信封；`data.update` 报告是否有新版本
+（`available: true` 时可提示用户运行 `ew update`；`--offline` 时为 `false`）。
 
 ---
 

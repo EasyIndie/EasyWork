@@ -287,6 +287,9 @@ manifest_module_failed_at <name>
 > `status` 中模块的 `ok` 由「`installed=true` 且 `module_check` 通过」决定；
 > `module_check` 缺失时以 manifest 为准。这正是现有半成品 `module_check`/`module_status`
 > 的正式接入口。
+>
+> `version` / `status` / `list` / `doctor` 的 `data` 均含 `update` 字段：
+> `{ "latest": "vX.Y.Z"|null, "available": bool }`（`--offline` 时为 `false`）。
 
 ---
 

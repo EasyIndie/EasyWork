@@ -271,7 +271,8 @@ _cmd_list_json() {
             entries="${entries}{\"name\":\"$(json_escape "$name")\",\"description\":\"$(json_escape "$desc")\",\"priority\":${MODULE_PRIORITY_VALUES[$i]:-50}}"
         done
     fi
-    printf '{"ok":true,"command":"list","data":{"modules":[%s]},"error":null}\n' "$entries"
+    printf '{"ok":true,"command":"list","data":{"modules":[%s],"update":%s},"error":null}\n' \
+        "$entries" "$(update_json_fragment)"
 }
 
 # ─── CLI: Status ──────────────────────────────────────────────
@@ -393,7 +394,8 @@ _cmd_doctor_json() {
         first=false
         checks="${checks}{\"name\":\"$(json_escape "$name")\",\"ok\":$ok,\"detail\":\"$(json_escape "$detail")\"}"
     done < <(_doctor_collect)
-    printf '{"ok":true,"command":"doctor","data":{"checks":[%s]},"error":null}\n' "$checks"
+    printf '{"ok":true,"command":"doctor","data":{"checks":[%s],"update":%s},"error":null}\n' \
+        "$checks" "$(update_json_fragment)"
 }
 
 # ─── CLI: Init ────────────────────────────────────────────────
