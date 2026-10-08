@@ -473,8 +473,13 @@ cmd_update() {
     log_info "最新版本: ${latest_version}"
 
     local answer="y"
-    if [[ "${YES_MODE:-false}" != "true" ]]; then
+    if [[ "${YES_MODE:-false}" == "true" ]]; then
+        answer="y"
+    elif [[ -t 0 ]]; then
         read -r -p "  升级到 ${latest_version}？[Y/n] " answer
+    else
+        log_info "非交互模式，跳过升级（使用 --yes 以自动升级）"
+        answer="n"
     fi
 
     if [[ "$answer" =~ ^[Nn] ]]; then

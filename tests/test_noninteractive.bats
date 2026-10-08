@@ -8,6 +8,7 @@ setup() {
     source "${EASYWORK_ROOT}/lib/common.sh"
     source "${EASYWORK_ROOT}/lib/shell.sh"
     source "${EASYWORK_ROOT}/lib/git.sh"
+    exec < /dev/null # never inherit the developer's tty
 }
 
 teardown() {

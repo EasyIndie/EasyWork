@@ -4,6 +4,7 @@
 setup() {
     load helpers/mocks
     setup_mocks
+    exec < /dev/null # never inherit the developer's tty
 }
 
 teardown() { teardown_mocks; }

@@ -66,6 +66,7 @@ MOCK_CMD
     chmod +x "$TEST_HOME/.local/bin/easywork"
 
     export PATH="$TEST_HOME/.local/bin:$PATH"
+    exec < /dev/null # never inherit the developer's tty
 }
 
 teardown() {

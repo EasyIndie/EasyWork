@@ -6,6 +6,7 @@ setup() {
     setup_mocks
     EASYWORK_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
     source "${EASYWORK_ROOT}/lib/common.sh"
+    exec < /dev/null # never inherit the developer's tty
 }
 
 teardown() { teardown_mocks; }
