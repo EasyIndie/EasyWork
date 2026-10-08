@@ -127,8 +127,12 @@ cmd_install() {
                 source "${LIB_DIR}/${name}.sh"
             fi
             if module_install; then
-                manifest_set_section "$name" \
-                    "installed=true"
+                # Modules that self-record (git/vim/gh/ai-tools) must keep their
+                # own keys; only fall back to a bare section when absent.
+                if ! manifest_section_exists "$name"; then
+                    manifest_set_section "$name" \
+                        "installed=true"
+                fi
                 log_success "${name} 完成"
             else
                 log_error "[${name}] 失败"

@@ -382,3 +382,14 @@ FAIL_CURL
     [[ "$output" == "Test User" ]]
     [[ -f "$TEST_HOME/.easywork/config.toml" ]]
 }
+
+@test "e2e: install git keeps module manifest keys" {
+    mkdir -p "$TEST_HOME/.easywork"
+    printf '[user]\n  name = preexisting\n' > "$TEST_HOME/.gitconfig"
+    run easywork install git --yes
+    [[ "$status" -eq 0 ]]
+    run cat "$TEST_HOME/.easywork/manifest"
+    # Framework must not clobber keys written by the module
+    [[ "$output" =~ "scope=global" ]]
+    [[ "$output" =~ "config_backup=" ]]
+}
