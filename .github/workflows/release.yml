@@ -30,14 +30,14 @@ jobs:
       - name: Verify Version Consistency
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/}"
-          FILE_VERSION="$(cat VERSION | head -1 | tr -d '[:space:]')"
-          SCRIPT_VERSION="$(grep -o 'EASYWORK_VERSION="[^"]*"' bin/easywork | head -1 | sed 's/EASYWORK_VERSION="//;s/"//')"
-          if [[ "$TAG_VERSION" != "$FILE_VERSION" ]]; then
-            echo "ERROR: Tag (${TAG_VERSION}) != VERSION file (${FILE_VERSION})"
+          # 版本单一来源：internal/version/version.go（release 由 ldflags 注入 tag）
+          GO_VERSION="$(sed -n 's/^var Version = "\(.*\)"/\1/p' internal/version/version.go | head -1)"
+          if [[ -z "$GO_VERSION" ]]; then
+            echo "ERROR: 无法从 internal/version/version.go 解析版本"
             exit 1
           fi
-          if [[ "$TAG_VERSION" != "$SCRIPT_VERSION" ]]; then
-            echo "ERROR: Tag (${TAG_VERSION}) != bin/easywork EASYWORK_VERSION (${SCRIPT_VERSION})"
+          if [[ "$TAG_VERSION" != "$GO_VERSION" ]]; then
+            echo "ERROR: Tag (${TAG_VERSION}) != internal/version default (${GO_VERSION})"
             exit 1
           fi
           echo "Version check passed: ${TAG_VERSION}"
@@ -80,11 +80,11 @@ jobs:
           ## 🚀 快速开始
 
           \`\`\`bash
-          # 一键安装
-          curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/${TAG_VERSION}/bin/easywork | bash
+          # 一键安装（跨平台二进制引导）
+          curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/${TAG_VERSION}/bootstrap.sh | bash
 
           # 配置开发环境
-          easywork install
+          ew install --yes
           \`\`\`
 
           > 系统要求：macOS 或 Linux，bash 或 zsh，已安装 curl 和 git。
@@ -129,7 +129,7 @@ jobs:
       - name: Generate SHA256 Checksums
         run: |
           cd "${{ github.workspace }}"
-          for f in bin/easywork lib/*.sh easywork.conf.example VERSION; do
+          for f in bin/easywork lib/*.sh easywork.conf.example; do
             if [ -f "$f" ]; then
               echo "Generating checksum for $f"
               sha256sum "$f" > "${f}.sha256"
@@ -147,9 +147,97 @@ jobs:
             lib/*.sh.sha256
             easywork.conf.example
             easywork.conf.example.sha256
-            VERSION
-            VERSION.sha256
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  binaries:
+    name: Build binaries (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    needs: release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+          - { goos: windows, goarch: arm64 }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Build & archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+          GOOS="${{ matrix.goos }}"
+          GOARCH="${{ matrix.goarch }}"
+          BIN=ew
+          [ "$GOOS" = windows ] && BIN=ew.exe
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+            go build -trimpath \
+            -ldflags "-s -w -X github.com/EasyIndie/EasyWork/internal/version.Version=${TAG}" \
+            -o "dist/${BIN}" ./cmd/ew
+          cd dist
+          NAME="easywork_${TAG}_${GOOS}_${GOARCH}"
+          if [ "$GOOS" = windows ]; then
+            zip "${NAME}.zip" "${BIN}"
+          else
+            tar czf "${NAME}.tar.gz" "${BIN}"
+          fi
+          ls -la
+
+      - name: Upload assets
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/easywork_*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  checksums:
+    name: Checksums & attestation
+    runs-on: ubuntu-latest
+    needs: binaries
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "${GITHUB_REF#refs/tags/}" --pattern 'easywork_*' --dir dist
+          cd dist
+          sha256sum easywork_* > checksums.txt
+          cat checksums.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/easywork_*
+
+      - name: Upload checksums
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

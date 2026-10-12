@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Version (set by bin/easywork; default for standalone module usage)
-EASYWORK_VERSION="${EASYWORK_VERSION:-0.1.0}"
+EASYWORK_VERSION="${EASYWORK_VERSION:-0.0.0-dev}"
 
 # EasyWork home directory — centralizes all CLI state (config, manifest, cache, completions).
 # Overridable via EASYWORK_HOME for sandboxed/isolated runs (e.g. AI agents, tests).
@@ -82,7 +82,10 @@ log_success() {
     fi
 }
 log_warn() { printf "  %s!%s %s\n" "${C_YELLOW}" "${C_RESET}" "$*" >&2; }
-log_error() { printf "  %s✗%s %s\n" "${C_RED}" "${C_RESET}" "$*" >&2; }
+log_error() {
+    EW_LAST_ERROR="$*"
+    printf "  %s✗%s %s\n" "${C_RED}" "${C_RESET}" "$*" >&2
+}
 log_verbose() {
     if [[ "${VERBOSE:-false}" == "true" ]]; then printf "  %s[DEBUG]%s %s\n" "${C_PURPLE}" "${C_RESET}" "$*" >&2; fi
     return 0
@@ -349,6 +352,7 @@ remove_managed_section() {
     local tmpfile
     tmpfile="${file}.tmp.$$"
     _register_temp_file "$tmpfile"
+    : > "$tmpfile"
     local in_section=false
     local line
     while IFS= read -r line; do
@@ -456,7 +460,7 @@ manifest_read() {
         # firing when grep returns 1 (no match — a normal, expected case)
         local escaped_key
         escaped_key="$(_escape_regex "$key")"
-        val="$(grep -E "^${escaped_key}=" "$MANIFEST_FILE" 2> /dev/null | head -1 | cut -d= -f2- || true)"
+        val="$(grep -E "^${escaped_key}=" "$MANIFEST_FILE" 2> /dev/null | head -1 | cut -d= -f2- | tr -d '\r' || true)"
         echo "${val:-$default}"
     else
         echo "$default"
@@ -483,7 +487,7 @@ manifest_section_installed() {
 
 manifest_list_installed() {
     if ! manifest_exists; then return 0; fi
-    awk -F'=' '/^\[/{section=$1; gsub(/[\[\]]/,"",section)} /^installed=true$/{print section}' "$MANIFEST_FILE"
+    awk -F'=' '{ sub(/\r$/, "") } /^\[/{section=$1; gsub(/[\[\]]/,"",section)} /^installed=true$/{print section}' "$MANIFEST_FILE"
 }
 
 manifest_init() {
@@ -514,6 +518,7 @@ manifest_set_section() {
     # Read existing manifest (minus the target section)
     if manifest_exists; then
         while IFS= read -r line; do
+            line="${line%$'\r'}"
             if [[ "$line" == "[${section}]" ]]; then
                 skip_section=true
                 continue
@@ -550,6 +555,7 @@ manifest_remove_section() {
     local new_manifest=""
     local skip_section=false
     while IFS= read -r line; do
+        line="${line%$'\r'}"
         if [[ "$line" == "[${section}]" ]]; then
             skip_section=true
             continue
@@ -624,6 +630,7 @@ manifest_read_section_key() {
 
     local in_section=false
     while IFS= read -r line; do
+        line="${line%$'\r'}"
         if [[ "$line" == "[${section}]" ]]; then
             in_section=true
             continue
@@ -703,17 +710,41 @@ _cfg_trim() {
 }
 
 # Extract the scalar from a raw 'key = value' right-hand side.
+# Quoted values support the escapes emitted by cfg_set: \\ \" \n \t.
 _cfg_value() {
     local raw="$1"
     raw="$(_cfg_trim "$raw")"
     if [[ "$raw" == \"* ]]; then
         raw="${raw#\"}"
-        raw="${raw%%\"*}"
+        local out="" ch esc=false i
+        for ((i = 0; i < ${#raw}; i++)); do
+            ch="${raw:i:1}"
+            if $esc; then
+                case "$ch" in
+                    '"') out+='"' ;;
+                    "\\") out+="\\" ;;
+                    n) out+=$'\n' ;;
+                    t) out+=$'\t' ;;
+                    *) out+="\\$ch" ;;
+                esac
+                esc=false
+                continue
+            fi
+            if [[ "$ch" == "\\" ]]; then
+                esc=true
+                continue
+            fi
+            if [[ "$ch" == '"' ]]; then
+                break
+            fi
+            out+="$ch"
+        done
+        printf '%s' "$out"
     else
         raw="${raw%%#*}"
         raw="$(_cfg_trim "$raw")"
+        printf '%s' "$raw"
     fi
-    printf '%s' "$raw"
 }
 
 # Read a scalar from config.toml by dotted key.
@@ -818,6 +849,11 @@ cfg_set() {
     _register_temp_file "$tmpfile"
 
     local section_found=false key_written=false in_target=false
+    # 无点号键为顶层键：初始即处于目标上下文
+    if [[ -z "$section" ]]; then
+        in_target=true
+        section_found=true
+    fi
     local line sec lhs
     while IFS= read -r line; do
         if [[ "$line" == \[*\] ]]; then
@@ -1071,9 +1107,12 @@ list_modules() {
     for i in "${!MODULE_NAMES[@]}"; do
         entries+=("${MODULE_PRIORITY_VALUES[$i]}|${MODULE_NAMES[$i]}|${MODULE_DESCRIPTIONS[$i]}")
     done
+    # --json 时日志走 stderr，避免污染 stdout 数据
+    local out=/dev/stdout
+    [[ "${JSON_MODE:-false}" == "true" ]] && out=/dev/stderr
     if [[ ${#entries[@]} -gt 0 ]]; then
         printf '%s\n' "${entries[@]}" | sort -t'|' -k1 -n | while IFS='|' read -r prio name desc; do
-            [[ -n "$name" ]] && printf "  %-30s %s\n" "$name" "$desc"
+            [[ -n "$name" ]] && printf "  %-30s %s\n" "$name" "$desc" > "$out"
         done
     fi
 }
@@ -1355,8 +1394,19 @@ json_escape() {
     printf '%s' "$s"
 }
 
+# 输出 --json 失败信封到 stdout：{"ok":false,...,"error":{"code":N,"message":...}}
+# 用法: _json_error_envelope <command> <code> <message>
+_json_error_envelope() {
+    local cmd="$1" code="$2" msg="$3"
+    printf '{"ok":false,"command":"%s","data":null,"error":{"code":%s,"message":"%s"}}\n' \
+        "$(json_escape "$cmd")" "$code" "$(json_escape "$msg")"
+}
+
 # ─── Temp File Tracking (for signal cleanup) ──────────────────
 TEMP_FILES=""
+
+# 最近一次 log_error 的消息（用于 --json 错误信封）
+EW_LAST_ERROR=""
 
 _register_temp_file() {
     TEMP_FILES="${TEMP_FILES}${TEMP_FILES:+ }$1"

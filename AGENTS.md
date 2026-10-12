@@ -24,9 +24,16 @@ make check       # lint + fmt-check + test（提交前必跑）
 make lint        # ShellCheck 静态分析
 make test        # bats tests/ --recursive
 make fmt         # 自动格式化
-make dry-run     # ./bin/easywork install --dry-run --yes
-./bin/easywork install --dry-run --yes   # 预览安装
+make build       # 构建 Go 二进制到 .build/ew
+make install     # 安装 Go CLI（跨平台，见下）
+make dry-run     # 预览安装（Go 引擎）
+./bin/easywork install --dry-run --yes   # 预览安装（Bash 引擎，仅 oracle）
 ```
+
+`make install` 委托 `scripts/install.sh`：
+- Unix：装到 `/usr/local/bin`（可写）否则 `~/.local/bin`，并建 `ew` 软链；
+- Windows（Git Bash/MSYS）：装 `easywork.exe`+`ew.exe` 到 `~/.local/bin`，
+  并确保用户 **PATH** 与 **PATHEXT**（`.EXE`）；无 `make` 时可直接 `bash scripts/install.sh`。
 
 ## 4. 目录结构
 
@@ -36,14 +43,28 @@ lib/common.sh      # 核心库：日志/系统检测/下载/manifest/config/锁/
 lib/install.sh     # install / uninstall 编排
 lib/completions.sh # bash/zsh 补全生成与注入
 lib/{shell,git,vim}.sh  # 三个模块（每个即一个开发环境组件）
-tests/*.bats       # 139 个 BATS 用例（cli/e2e/modules/noninteractive/unit）
+tests/*.bats       # 192 个 BATS 用例（cli/e2e/modules/noninteractive/unit）
 tests/helpers/mocks.bash  # mock 层：覆盖 HOME，mock curl/git/vim 等
 MODULES            # 模块索引（管道安装时远程拉取）
 DESIGN.md          # v2 蓝图（5 契约 + 人机体验 + 命令名）
+docs/spec/         # 5 契约的规范性语言无关规格 + 跨平台行为（黑盒 conformance 判据）
+docs/ROLLBACK.md   # 迁移期回滚指南
+docs/ACCEPTANCE.md # 验收清单（M0–M7）与决策归档
+docs/RETIREMENT.md  # Bash 退役前置条件与步骤
+scripts/acceptance.sh # 一键验收（make acceptance）
+cmd/ew/            # Go 跨平台 CLI 入口（新引擎）
+internal/platform/ # 平台抽象（Env/PkgManager/Lock/AtomicWrite/ShellProfile）
+internal/engine/   # 核心引擎（config.toml/manifest/managed section/json）
+internal/modules/  # Go 模块（git/gh/vim/ai/shell + 可选 mole/herdr/glow，均为 CLI）
+internal/release/  # 发布资产命名/校验/解包（update 自升级）
+internal/cli/      # 命令路由与各命令
+bootstrap.sh       # curl|bash 薄引导（下载并安装二进制）
+tests/conformance/ # 黑盒 conformance（同时验证 Bash 与 Go）
 ```
 
 ## 5. 架构要点
 
+- **规范源**：`docs/spec/` 是语言无关的契约规格，是行为等价性的唯一判据；改契约先改规格
 - **模块契约**：每个 `lib/*.sh` 模块必须声明 `MODULE_NAME`/`MODULE_DESCRIPTION`/`MODULE_PRIORITY`，
   并实现 `module_install`/`module_uninstall`；可选 `module_check`/`module_status`/`module_doctor`
 - **模块自动发现**：`_discover_modules` 扫描 `lib/*.sh`，跳过 common/completions/install 三个库文件
@@ -72,8 +93,11 @@ DESIGN.md          # v2 蓝图（5 契约 + 人机体验 + 命令名）
 - ✅ **config.toml 完全取代旧 ini**：`config_init` 创建 config.toml；旧 `config`（ini）仅作只读回退，
   首次 `install` / `config edit` 自动迁移；`config get/set` 读写 config.toml
 - ✅ **可选模块（定稿见 DESIGN.md §11）**：新增 `gh`（自动安装 GitHub CLI）、
-  `ai-tools`（自动安装 claude code / codex / pi，经 npm，离线/禁用开关可控）
-- ❌ **明确不做**：editor（GUI）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
+  `ai`（别名 `ai-tools`；自动安装 claude code / codex / pi，经 npm，离线/禁用开关可控，
+  支持子组件细选 `ew install ai/claude`）
+- ✅ **可选工具模块（v2.x，Go 起，仅 CLI）**：`mole`/`herdr`/`glow`；
+  实现 `Optional()`，默认 `ew install` 不装，显式指名才装，并按平台支持自动跳过
+- ❌ **明确不做**：GUI 应用（含终端模拟器）、editor（VS Code / Cursor）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
 - 测试现状：190 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
 
 ## 7. 改动规则

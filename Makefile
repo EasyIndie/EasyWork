@@ -1,4 +1,4 @@
-.PHONY: lint test fmt fmt-check check install clean help dry-run
+.PHONY: lint test fmt fmt-check check check-all install clean help dry-run conform-bash conform build gotest acceptance update-e2e retire-check
 
 # ── EasyWork Makefile ──────────────────────────────────────────
 
@@ -46,20 +46,36 @@ endif
 check: lint fmt-check test ## Run all checks (lint + format-check + test)
 	@echo "✅ All checks passed"
 
-dry-run: ## Preview what easywork install would do
-	./bin/easywork install --dry-run --yes
+build: ## Build the Go binary into .build/ew
+	mkdir -p .build
+	go build -o .build/ew ./cmd/ew
 
-install: ## Install CLI to /usr/local/bin (requires sudo)
-	@echo "==> Installing easywork..."
-	@if [ -w /usr/local/bin ]; then \
-		cp bin/easywork /usr/local/bin/easywork && chmod +x /usr/local/bin/easywork && ln -sf easywork /usr/local/bin/ew; \
-	elif [ -d "$$HOME/.local/bin" ] || mkdir -p "$$HOME/.local/bin" 2>/dev/null; then \
-		cp bin/easywork "$$HOME/.local/bin/easywork" && chmod +x "$$HOME/.local/bin/easywork" && ln -sf easywork "$$HOME/.local/bin/ew"; \
-	else \
-		echo "Cannot install. Please copy bin/easywork to a directory in your PATH manually."; \
-		exit 1; \
-	fi
-	@echo "✅ easywork installed (short alias: ew). Run: ew help"
+gotest: ## Run Go unit tests
+	go test ./...
+
+check-all: lint fmt-check test gotest conform-bash ## Full check: shell + Go + conformance
+	@echo "✅ All checks passed (with Go conformance)"
+
+acceptance: ## Run the full migration acceptance suite (M0–M7)
+	bash scripts/acceptance.sh
+
+update-e2e: ## End-to-end self-upgrade test via a local mirror
+	bash scripts/update-e2e.sh
+
+retire-check: ## Check preconditions for retiring the Bash engine
+	bash scripts/retire-check.sh
+
+dry-run: build ## Preview what easywork install would do (Go engine)
+	./.build/ew install --dry-run --yes
+
+conform-bash: ## Run black-box conformance against the Bash implementation
+	bash tests/conformance/run.sh bash
+
+conform: ## Run black-box conformance against Bash and Go implementations
+	bash tests/conformance/run.sh all
+
+install: build ## Install Go CLI (Unix: /usr/local/bin; Windows: ~/.local/bin + PATH/PATHEXT)
+	@bash scripts/install.sh
 
 clean: ## Remove temporary files
 	rm -f *.tmp *.bak

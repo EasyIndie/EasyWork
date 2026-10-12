@@ -100,3 +100,111 @@ jobs:
       - name: Format Check
         shell: bash
         run: shfmt -d -i 4 -bn -ci -sr .
+
+  go-engine:
+    name: Go engine (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Go unit tests
+        shell: bash
+        run: go test ./...
+
+      - name: gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l ./cmd ./internal)"
+          if [[ -n "$unformatted" ]]; then
+            echo "需要 gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        shell: bash
+        run: go vet ./...
+
+      - name: Install BATS (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if command -v brew >/dev/null 2>&1; then
+            brew install bats-core
+          else
+            git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats
+            sudo /tmp/bats/install.sh /usr/local
+          fi
+
+      - name: Conformance (Bash + Go, Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: tests/conformance/run.sh all
+
+      - name: Conformance (Go-only, Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          LANG: C.UTF-8
+          LC_ALL: C.UTF-8
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          export BATS="$(cygpath -u "$RUNNER_TEMP")/bats-core/bin/bats"
+          tests/conformance/run.sh go
+
+      - name: Native Windows smoke (Go engine)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          go build -o "$RUNNER_TEMP/ew.exe" ./cmd/ew
+          mkdir -p "$RUNNER_TEMP/home"
+          export HOME="$RUNNER_TEMP/home"
+          export EASYWORK_HOME="$RUNNER_TEMP/home/.easywork"
+          "$RUNNER_TEMP/ew.exe" status --json --offline | grep -q '"ok":true'
+          "$RUNNER_TEMP/ew.exe" list --json --offline | grep -q '"name":"ai"'
+          "$RUNNER_TEMP/ew.exe" list --json --offline | grep -q '"optional":true'
+          "$RUNNER_TEMP/ew.exe" config set git.identities.personal.name 'Win User'
+          "$RUNNER_TEMP/ew.exe" config get git.identities.personal.name | grep -q 'Win User'
+          "$RUNNER_TEMP/ew.exe" install shell git --yes --offline
+          grep -q 'managed section' "$RUNNER_TEMP/home/.sh_config_custom" 2>/dev/null || grep -rq 'managed section' "$RUNNER_TEMP/home/Documents" 2>/dev/null
+
+  cross-compile:
+    name: Cross-compile (6 targets)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Build darwin/linux/windows x amd64/arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          for goos in darwin linux windows; do
+            for goarch in amd64 arm64; do
+              echo "==> $goos/$goarch"
+              CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+                go build -trimpath -o /dev/null ./cmd/ew
+            done
+          done
+          echo "✅ 6 targets built"

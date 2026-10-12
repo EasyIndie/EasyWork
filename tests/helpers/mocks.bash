@@ -20,6 +20,9 @@ setup_mocks() {
     export TEST_HOME
     export HOME="${TEST_HOME}"
     mkdir -p "${TEST_HOME}"
+    # 防止 piped 自安装写到真实 /usr/local/bin（覆盖 Go 引擎）
+    export EASYWORK_BIN_DIR="${TEST_HOME}/.local/bin"
+    mkdir -p "${EASYWORK_BIN_DIR}"
 
     # Override manifest and config paths
     export MANIFEST_FILE="${TEST_HOME}/.easywork/manifest"

@@ -236,13 +236,18 @@ cmd_completion() {
             fi
             ;;
         *)
-            echo "用法: easywork completion <子命令>"
-            echo ""
-            echo "子命令:"
-            echo "  setup    生成并注入补全到 shell 配置文件"
-            echo "  remove   从 shell 配置文件移除补全"
-            echo "  status   查看补全安装状态"
-            exit $EXIT_ERROR
+            log_error "未知 completion 子命令: ${sub}"
+            local _usage_out=/dev/stdout
+            [[ "${JSON_MODE:-false}" == "true" ]] && _usage_out=/dev/stderr
+            cat > "$_usage_out" << 'EOF'
+用法: easywork completion <子命令>
+
+子命令:
+  setup    生成并注入补全到 shell 配置文件
+  remove   从 shell 配置文件移除补全
+  status   查看补全安装状态
+EOF
+            return $EXIT_ERROR
             ;;
     esac
 }

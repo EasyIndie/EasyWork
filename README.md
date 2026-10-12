@@ -12,14 +12,15 @@
 ## 快速开始
 
 ```bash
-# 安装 CLI（始终取最新 release；同时创建短命令 ew）
-curl -sL https://github.com/EasyIndie/EasyWork/releases/latest/download/easywork | bash
+# 安装 CLI（跨平台二进制；同时创建短命令 ew）
+curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash
 
 # 轻量初始化：Shell 别名 + Git 别名，零交互、零重依赖
 ew init
 ```
 
-> 系统要求：macOS 或 Linux，bash 或 zsh，已安装 curl 和 git。
+> 系统要求：macOS / Linux / Windows，已安装 curl（Unix）或 PowerShell（Windows）。
+> 发布物为静态单文件二进制，终端用户无需任何运行时依赖。
 
 `easywork` 与 `ew` 完全等价，本文档统一使用 `ew`。
 
@@ -28,6 +29,7 @@ ew init
 ## 为什么顺手
 
 - **零交互上手**：`ew init` 不问任何问题，默认只装轻量、可逆的配置。
+- **跨平台单二进制**：macOS / Linux / Windows 同一套代码，发布静态二进制（Go 引擎）。
 - **重活后置**：Vim IDE、Oh My Zsh、花哨提示符全部按需开启，不惊吓、不拖慢。
 - **身份零配置可用**：Git 身份自动探测（config → 已有 `git config` → 跳过），缺失也不阻塞。
 - **对人和 AI 都友好**：`--json` 机器可读输出、`--offline` 离线模式、声明式 `config.toml`。
@@ -45,7 +47,7 @@ ew <命令> [参数] [选项]
 |---|---|
 | `init` | 轻量初始化（shell + git，零交互） |
 | `install [组件...]` | 安装全部组件（或指定组件） |
-| `uninstall [组件...]` | 卸载组件（不指定则卸载全部） |
+| `uninstall [组件]` | 卸载组件（不指定则卸载全部） |
 | `status` | 查看当前状态（无参数时的默认命令） |
 | `doctor` | 环境诊断（依赖 / 网络 / shell） |
 | `list` | 列出可用组件 |
@@ -121,10 +123,33 @@ NERDTree、Airline、fzf、coc.nvim、ALE、Markdown 预览、Git 集成等。
 自动安装官方 GitHub CLI，便于在终端完成 PR / issue / release / actions 操作。
 旧发行版（默认源无 gh 时）会自动添加 GitHub 官方 apt/dnf 源。
 
-### AI 工具 (ai-tools)
+### AI 工具 (ai)
 
 自动安装 **claude code / codex / pi**（经 npm）；离线模式自动跳过。
-可通过 `[ai_tools] install = false` 关闭。
+可通过 `[ai] install = false` 关闭。旧名 `ai-tools` 仍可用作兼容别名。
+
+细粒度选择（多个目标以**空格**分隔）：
+
+```bash
+ew install ai             # 全部子工具
+ew install ai/claude      # 只装 1 个
+ew install claude codex   # 多个（简写）
+```
+
+也可用 `[ai] tools = "claude codex"` 设默认子集（不写 = 全部）。
+
+### 可选工具
+
+以下工具**默认不装**（避免 `ew install` 默认装重组件），显式指名才安装；
+平台无支持版本时自动跳过。**仅 CLI 工具：不含 GUI 应用与终端模拟器**：
+
+```bash
+ew install glow        # 终端 Markdown 渲染（全平台）
+ew install herdr       # Agent 运行时（全平台）
+ew install mole        # macOS 清理与优化（macOS / Windows，命令 mo）
+```
+
+`ew list` 会以「（可选，默认不装）」标注。
 
 ---
 
@@ -179,11 +204,22 @@ ew uninstall shell           # 只卸载指定组件
 
 ---
 
+## 实现与迁移
+
+- **引擎**：Go（`cmd/ew` + `internal/*`），静态单文件，macOS / Linux / Windows 同一套代码、
+  同一套契约。
+- **安装入口**：`bootstrap.sh`（`curl | bash`）下载并安装对应平台二进制。
+- **Bash 引擎**：迁移期保留作**等价性 oracle**（已冻结，仅安全修复），即将退役；
+  前置条件与步骤见 [docs/RETIREMENT.md](docs/RETIREMENT.md)，可用 `make retire-check` 检查。
+- **规格与验收**：语言无关契约见 [docs/spec/](docs/spec/)；验收见
+  [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
+
 ## 开发
 
 ```bash
 make check    # lint + 格式化检查 + 测试
 make test     # 运行测试
+make install  # 安装 Go CLI（Unix: /usr/local/bin 或 ~/.local/bin；Windows: ~/.local/bin + PATH）
 make dry-run  # 预览安装
 ```
 

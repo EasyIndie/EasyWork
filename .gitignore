@@ -14,3 +14,7 @@ easywork.conf
 .easywork/manifest
 *.tmp
 *.bak
+
+# Go build artifacts
+.build/
+dist/

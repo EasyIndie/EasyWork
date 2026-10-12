@@ -2,8 +2,8 @@
 # E2E tests: real user flows with standalone binary simulation
 
 EASYWORK_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
-# Derive the binary's version so assertions don't hardcode it across releases.
-EASYWORK_BIN_VERSION="$(sed -n 's/^EASYWORK_VERSION="\(.*\)"/\1/p' "${EASYWORK_ROOT}/bin/easywork" | head -1)"
+# Standalone copy has no version source → 开发占位符（与 bin/easywork 一致）
+EASYWORK_BIN_VERSION="0.0.0-dev"
 
 setup() {
     TEST_HOME="$(mktemp -d)"
@@ -12,7 +12,7 @@ setup() {
     export TMPDIR="$TEST_HOME/tmp"
     mkdir -p "$TMPDIR"
     # Ignore any EASYWORK_* env leaking from the developer's shell
-    unset EASYWORK_HOME EASYWORK_RAW_URL EASYWORK_RELEASE_URL EASYWORK_API_URL EASYWORK_WEB_URL EASYWORK_CHANNEL
+    unset EASYWORK_HOME EASYWORK_RAW_URL EASYWORK_RELEASE_URL EASYWORK_API_URL EASYWORK_WEB_URL EASYWORK_CHANNEL EASYWORK_VERSION
 
     # Create mock wrapper that replaces curl to serve from local repo
     cat > "$TEST_HOME/.local/bin/curl" << MOCK_CURL
@@ -70,6 +70,9 @@ MOCK_CMD
     # Standalone binary (no lib/ directory)
     cp "${EASYWORK_ROOT}/bin/easywork" "$TEST_HOME/.local/bin/easywork"
     chmod +x "$TEST_HOME/.local/bin/easywork"
+
+    # 防止 piped 自安装写到真实 /usr/local/bin（覆盖 Go 引擎）
+    export EASYWORK_BIN_DIR="$TEST_HOME/.local/bin"
 
     export PATH="$TEST_HOME/.local/bin:$PATH"
     exec < /dev/null # never inherit the developer's tty

@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.." || exit 1
 
 # Isolate tests from any EASYWORK_* env leaking from the developer's shell
 # (e.g. EASYWORK_HOME exported during manual testing).
-unset EASYWORK_HOME EASYWORK_RAW_URL EASYWORK_RELEASE_URL EASYWORK_API_URL EASYWORK_WEB_URL EASYWORK_CHANNEL
+unset EASYWORK_HOME EASYWORK_RAW_URL EASYWORK_RELEASE_URL EASYWORK_API_URL EASYWORK_WEB_URL EASYWORK_CHANNEL EASYWORK_VERSION
 
 jobs="${1:-${JOBS:-}}"
 if [[ -z "$jobs" ]]; then

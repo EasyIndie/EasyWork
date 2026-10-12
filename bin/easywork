@@ -5,8 +5,6 @@
 
 set -euo pipefail
 
-EASYWORK_VERSION="0.1.0"
-
 # EasyWork home — single state root (overridable for sandboxed/isolated runs)
 EASYWORK_HOME="${EASYWORK_HOME:-${HOME}/.easywork}"
 
@@ -30,12 +28,18 @@ else
     IS_PIPED=false
 fi
 
-# Raw content URL — version-matched; fallback to main when tag is missing
-if $IS_PIPED; then
-    EASYWORK_RAW_URL="${EASYWORK_RAW_URL:-https://raw.githubusercontent.com/EasyIndie/EasyWork/${EASYWORK_VERSION}}"
-else
-    EASYWORK_RAW_URL="${EASYWORK_RAW_URL:-https://raw.githubusercontent.com/EasyIndie/EasyWork/${EASYWORK_VERSION}}"
+# ─── Version ─────────────────────────────────────────────────
+# 单一来源：internal/version/version.go（Go 引擎）；release 由构建期 ldflags 注入。
+# 优先级：环境变量 > 本地源码 > 开发占位符（piped）。
+if [[ -z "${EASYWORK_VERSION:-}" ]] && [[ -n "${EASYWORK_ROOT:-}" ]] && [[ -f "${EASYWORK_ROOT}/internal/version/version.go" ]]; then
+    EASYWORK_VERSION="$(sed -n 's/^var Version = "\(.*\)"/\1/p' "${EASYWORK_ROOT}/internal/version/version.go" | head -1)"
 fi
+EASYWORK_VERSION="${EASYWORK_VERSION:-0.0.0-dev}"
+
+# Raw content URL — 版本匹配；开发占位符时回退 main
+_ew_ref="${EASYWORK_VERSION}"
+[[ "$_ew_ref" == "0.0.0-dev" ]] && _ew_ref="main"
+EASYWORK_RAW_URL="${EASYWORK_RAW_URL:-https://raw.githubusercontent.com/EasyIndie/EasyWork/${_ew_ref}}"
 
 # ─── Source Common Library ────────────────────────────────────
 # Try local checkout first, then fall back to download (standalone/piped install)
@@ -447,7 +451,7 @@ cmd_update() {
     api_response="$(safe_download "${EASYWORK_API_URL}" -H "Accept: application/vnd.github+json" 2> /dev/null || true)"
 
     local latest_version
-    latest_version="$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
+    latest_version="$(echo "$api_response" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/' || true)"
 
     if [[ -z "$latest_version" ]]; then
         # Fallback: try reading VERSION from raw URL
@@ -706,62 +710,77 @@ main() {
         fi
     fi
 
+    # Bash 引擎已进入维护期：仅在交互式人类会话提示（测试/JSON/管道不提示）
+    if [[ "${JSON_MODE:-false}" != "true" ]] && [[ -t 1 ]] && [[ "${EASYWORK_NO_DEPRECATION_NOTICE:-}" != "true" ]]; then
+        case "$cmd" in
+            install | uninstall | init | update)
+                printf '  %s!%s %s\n' "${C_YELLOW}" "${C_RESET}" \
+                    "Bash 引擎已进入维护期（即将退役）；推荐改用 Go 版本安装: curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash" >&2
+                ;;
+        esac
+    fi
+
+    local rc=0
     case "$cmd" in
         install)
             shift || true
-            cmd_install "$@"
+            cmd_install "$@" || rc=$?
             ;;
         uninstall)
             shift || true
-            cmd_uninstall "$@"
+            cmd_uninstall "$@" || rc=$?
             ;;
         config)
             shift || true
-            cmd_config "$@"
+            cmd_config "$@" || rc=$?
             ;;
         completion | comp)
             shift || true
-            cmd_completion "$@"
+            cmd_completion "$@" || rc=$?
             ;;
         version)
-            cmd_version
+            cmd_version || rc=$?
             ;;
         list)
-            cmd_list
+            cmd_list || rc=$?
             ;;
         status)
-            cmd_status
+            cmd_status || rc=$?
             ;;
         doctor)
-            cmd_doctor
+            cmd_doctor || rc=$?
             ;;
         init)
-            cmd_init
+            cmd_init || rc=$?
             ;;
         update)
-            cmd_update
+            cmd_update || rc=$?
             ;;
         --help | -h)
-            cmd_help
+            if [[ "${JSON_MODE:-false}" == "true" ]]; then cmd_help >&2; else cmd_help; fi
             ;;
         *)
             # Graceful fallback for 'help' subcommand
             if [[ "$cmd" == "help" ]]; then
-                cmd_help
-                exit 0
-            fi
-            # Module shortcut commands were removed in v2 — guide to install
-            if module_registered "$cmd"; then
+                if [[ "${JSON_MODE:-false}" == "true" ]]; then cmd_help >&2; else cmd_help; fi
+            elif module_registered "$cmd"; then
                 log_error "不支持模块快捷命令: $cmd"
                 log_info "请使用: easywork install $cmd"
-                exit $EXIT_ERROR
+                rc=$EXIT_ERROR
+            else
+                log_error "未知命令: $cmd"
+                if [[ "${JSON_MODE:-false}" != "true" ]]; then echo ""; fi
+                if [[ "${JSON_MODE:-false}" == "true" ]]; then cmd_help >&2; else cmd_help; fi
+                rc=$EXIT_ERROR
             fi
-            log_error "未知命令: $cmd"
-            echo ""
-            cmd_help
-            exit $EXIT_ERROR
             ;;
     esac
+
+    # --json 失败时输出错误信封到 stdout（日志已走 stderr）
+    if [[ "$rc" -ne 0 ]] && [[ "${JSON_MODE:-false}" == "true" ]]; then
+        _json_error_envelope "$cmd" "$rc" "${EW_LAST_ERROR:-}"
+    fi
+    return "$rc"
 }
 
 main "$@"

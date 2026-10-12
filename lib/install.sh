@@ -14,7 +14,7 @@ cmd_install() {
         for t in "${targets[@]}"; do
             if ! module_registered "$t"; then
                 log_error "未知组件: $t"
-                echo ""
+                if [[ "${JSON_MODE:-false}" != "true" ]]; then echo ""; fi
                 log_info "可用组件:"
                 list_modules
                 return $EXIT_ERROR
@@ -179,7 +179,12 @@ cmd_install() {
         echo ""
         log_info "安装 easywork 到系统路径..."
         local install_path
-        if [[ -w "/usr/local/bin" ]]; then
+        # 支持 EASYWORK_BIN_DIR 覆盖安装目录（与 bootstrap.sh 一致；
+        # 测试/CI 借此避免误写系统路径 /usr/local/bin）。
+        if [[ -n "${EASYWORK_BIN_DIR:-}" ]]; then
+            mkdir -p "$EASYWORK_BIN_DIR" 2> /dev/null || true
+            install_path="${EASYWORK_BIN_DIR%/}/easywork"
+        elif [[ -w "/usr/local/bin" ]]; then
             install_path="/usr/local/bin/easywork"
         elif [[ -d "$HOME/.local/bin" ]] || mkdir -p "$HOME/.local/bin" 2> /dev/null; then
             install_path="$HOME/.local/bin/easywork"

@@ -1,12 +1,13 @@
 # EasyWork v2 设计草案
 
-> 状态：**草案（未实施）**
+> 状态：**契约已冻结并落地；跨平台迁移进行中（见 §12）**
 > 目的：在进入「AI 时代 · 人 + AI 双受众」改造前，冻结五个中间契约，
 > 使后续各子功能（声明式配置、JSON 输出、模块声明化、新模块、安全强化）
 > 能够并行开发而不互相干扰。
 >
-> 本文档只定义**接口与契约**，不规定实现细节。实现时如发现契约需要调整，
-> 先改本文档，再改代码。
+> 本文档定义**设计蓝图与决策**；五个契约的**规范性接口规格**见
+> [`docs/spec/`](docs/spec/README.md)。发生冲突时以 `docs/spec/` 为准；
+> 修改契约须先改规格，再改实现。
 
 ---
 
@@ -123,6 +124,12 @@ email = "san.zhang@company.com"
 
 [vim]
 enabled = true
+
+[ai]
+install = true
+# 细粒度选择（空格分隔子工具）：claude codex pi
+# 留空/注释掉 = 全部；例: tools = "claude codex"
+# tools = "claude codex pi"
 ```
 
 ### 3.2 约束
@@ -213,7 +220,7 @@ manifest_module_failed_at <name>
 |---|---|---|
 | `init` | 轻量默认：shell 保守别名 + git 别名，零交互、零重依赖 | 是 |
 | `apply [module]` | 按 config.toml 幂等应用（**无交互**） | 是 |
-| `install [module]` | 交互向导：init 基础上询问加装重组件；`--yes` ≈ init | 是 |
+| `install [module[/component]...]` | 交互向导；支持细粒度选择（见 §13）：`ai` 全装、`ai/claude` 单装、`claude` 简写，多目标空格分隔；可选模块仅显式指名时安装；`--yes` ≈ init | 是 |
 | `uninstall [module]` | 卸载（保留/删除配置遵循 flag） | 是 |
 | `list` | 列出模块与描述 | 是 |
 | `status` | 统一状态（config + 各模块） | 是 |
@@ -264,7 +271,14 @@ manifest_module_failed_at <name>
 // list
 { "modules": [
     { "name": "shell", "description": "配置 Shell 环境", "priority": 10 },
-    { "name": "git",   "description": "配置 Git 别名和身份", "priority": 20 }
+    { "name": "git",   "description": "配置 Git 别名和身份", "priority": 20 },
+    // v2.x（Go 起新增）：可选模块带 optional:true；声明子组件的模块附带 components
+    { "name": "glow", "description": "终端 Markdown 渲染", "priority": 55, "optional": true },
+    { "name": "ai", "description": "安装 AI 编码 CLI", "priority": 50,
+      "components": [
+        { "name": "claude", "description": "Anthropic Claude Code" },
+        { "name": "codex",  "description": "OpenAI Codex CLI" }
+      ] }
 ] }
 
 // status
@@ -433,6 +447,7 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 | 契约三 manifest | ✅ | `schema_version` + `manifest_module_state` |
 | 契约四 CLI / JSON | ✅ | `--json` 信封、`json_escape`、`version`/`list`/`status`/`doctor` |
 | 契约五 模块引擎 | ✅ | `apply_managed_file` / `remove_managed_file` / `apply_module_files` / `remove_module_files` |
+| 细粒度组件选择（v2.x） | ✅（Go 起） | `Components()` 接口 + `install module/component` + `ai.tools`（见 §13） |
 | Batch 1 契约层 | ✅ | 见上 |
 | Batch 2 模块引擎 | ✅ | 见上；shell / git / vim 已迁移 |
 | Batch 3 status / doctor / `--offline` | ✅ | `cmd_status` / `cmd_doctor`；`safe_download` 离线守卫 |
@@ -455,10 +470,18 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 
 ### 保留并新增
 
-| 模块 | 作用 | 安装方式 |
-|---|---|---|
-| `gh` | 安装 GitHub CLI | brew / apt / dnf / yum / pacman / zypper / apk；apt/dnf/yum 默认源缺失时**自动添加 GitHub 官方源**；其余失败给指引 |
-| `ai-tools` | 自动安装 **pi / codex / claude code** | 经 **npm**（三个都有 npm 包）；缺 npm 时给官方指引 |
+| 模块 | 作用 | 安装方式 | 平台 |
+|---|---|---|---|
+| `gh` | 安装 GitHub CLI | brew / apt / dnf / yum / pacman / zypper / apk；apt/dnf/yum 默认源缺失时**自动添加 GitHub 官方源**；其余失败给指引 | 全平台 |
+| `ai`（别名 `ai-tools`） | 自动安装 **pi / codex / claude code** | 经 **npm**（三个都有 npm 包）；缺 npm 时给官方指引；支持子组件细选（§13） | 全平台 |
+| `mole`（可选） | macOS 清理与优化（命令 `mo`） | brew（macOS）；Windows 官方 CLI 脚本 | macOS / Windows |
+| `herdr`（可选） | Agent 运行时 | brew / 官方 `install.sh` / Windows `install.ps1` | 全平台 |
+| `glow`（可选） | 终端 Markdown 渲染 | brew / apt / dnf / pacman / apk / winget / scoop / choco | 全平台 |
+
+> **可选模块（OptionalModule）**：默认不在 `ew install`（无参数）中安装，只有显式
+> `ew install <模块>` 才安装；且 `Platforms()` 未覆盖当前平台时由编排层跳过
+> （“仅平台有支持版本时安装”）。**仅安装 CLI 工具，不安装 GUI 应用；终端模拟器一律不安装。**
+> 详见 §13 与 `docs/spec/05`。
 
 ### 明确不做（需要时再单独加）
 
@@ -473,3 +496,195 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 - **幂等**：已安装则跳过
 - 失败**不阻塞**整体安装（记录 manifest，给出手动安装指引）
 - 核心仍**零运行时依赖**
+
+---
+
+## 12. 跨平台与二进制发布（v3 迁移契约）
+
+> 状态：**决策定稿（M0）**
+> 目的：在保持一套代码、单一维护成本的前提下，原生覆盖 Windows，
+> 并以**跨平台静态二进制**发布。Bash 实现退居为迁移期的等价性判据（oracle）。
+
+### 12.1 决策定稿
+
+| 编号 | 决策 | 结论 |
+|---|---|---|
+| 11 | Windows 支持程度 | **两档**：WSL2 / Git Bash 保底（过渡期与 CI 冒烟）；**原生 PowerShell + winget 为终态**。终态随 Go 引擎达成，不额外维护第二套代码 |
+| 12 | 迁移期双实现 | **接受**，但 Bash 版**冻结**（仅安全修复），仅作 conformance oracle，生命周期 **≤2 个 release**；以黑盒 conformance 作为唯一等价判据 |
+| 13 | 二进制签名/公证 | 第一版仅 **sha256 checksums + GitHub Artifact Attestations**（免费）；Windows 代码签名 / macOS notarization **推迟到 1.0 之后**，触发条件：面向外部/企业分发或出现 SmartScreen / Gatekeeper 拦截反馈 |
+
+### 12.2 目标架构
+
+```
+EasyWork（一套代码）
+├── cmd/ew/                 # CLI 入口（命令路由，对齐 §5）
+├── internal/platform/      # 平台抽象（Env/PkgManager/Lock/AtomicWrite/ShellProfile）
+├── internal/engine/        # 核心引擎（config.toml / manifest / JSON / managed section）
+├── internal/modules/       # 各模块（git/gh/vim/ai/shell[/shell-pwsh]）
+└── legacy/（Bash，冻结）    # 迁移期 oracle，≤2 release 后归档
+```
+
+- **契约不变**：§2–§6 定义的 `EASYWORK_HOME` / `config.toml` / manifest / JSON 信封 / 模块接口
+  即为跨语言 ABI，Go 版必须字节级兼容（stdout JSON、生成文件、退出码、managed 标记文本）。
+- **“零运行时依赖”重定义**：终端用户仍**零运行时依赖**（`CGO_ENABLED=0` 静态单文件）；
+  允许**编译期依赖**（Go module），此变更仅影响开发/构建，不影响用户。
+
+### 12.3 平台抽象（`internal/platform`）
+
+| 抽象 | Unix | Windows |
+|---|---|---|
+| `Env` | `HOME` / `TMPDIR` | `USERPROFILE` / `%TEMP%` |
+| `PkgManager` | brew / apt / dnf / yum / pacman / zypper / apk | **winget（默认）/ scoop / choco** |
+| `Lock` | flock → shlock → mkdir | `O_CREATE\|O_EXCL` 锁文件 + 陈旧检测 |
+| `AtomicWrite` | temp + `rename` | temp + `rename`（覆盖语义）/ 必要时 `ReplaceFile` |
+| `ShellProfile` | `~/.zshrc` / `~/.bash_profile` | PowerShell `$PROFILE`（CurrentUserCurrentHost，`Microsoft.PowerShell_profile.ps1`） |
+| 路径 / EOL | `/`，LF | `filepath`，生成文件 CRLF |
+| 可执行解析 | `PATH` | `exec.LookPath`（自动处理 `PATHEXT`） |
+
+### 12.4 模块能力声明
+
+模块须声明支持的平台集合，避免在 Windows 上执行无意义模块：
+
+- `git` / `gh` / `vim` / `ai`（别名 `ai-tools`）：**全平台**
+- `shell`：全平台。Unix 写 `~/.sh_config_custom` 并 source；Windows 直接向 PowerShell
+  `$PROFILE` 注入 managed section（将原 `shell-pwsh` 方案折叠进本模块，以保持模块注册表跨平台一致）。
+
+### 12.5 版本单一来源
+
+- **唯一来源**：`internal/version/version.go` 的 `Version`。已删除 `VERSION` 文件与 Bash 硬编码常量；
+  Bash 在本地 checkout 时从该文件读取版本。
+- release 由 **构建期 ldflags 注入** tag：`-X github.com/EasyIndie/EasyWork/internal/version.Version=<tag>`。
+- `release.yml` 校验 `tag == internal/version/version.go` 默认值。
+
+### 12.6 分发
+
+- **二进制发布**（CI 矩阵，不依赖 goreleaser）：`{darwin,linux,windows} × {amd64,arm64}`，
+  产物 + `checksums.txt` + Artifact Attestations；矩阵显式且可本地复现（见 `scripts/acceptance.sh`）。
+- **`curl | bash` 入口退化为薄引导**：探测 OS/arch → 下载对应二进制到 PATH → 执行；
+  不再下载 `lib/*.sh`。
+- 平台包管理分发（可选）：Homebrew tap / winget manifest / Scoop bucket。
+
+### 12.7 迁移阶段与门禁
+
+| 阶段 | 内容 | 门禁 |
+|---|---|---|
+| **M0** | 决策定稿 + Go spike（后由 conformance 承接，spike 已删） | `status --json` 与 Bash **字节等价**；`GOOS=windows` 可构建并在 `windows-latest` 运行 |
+| **M1** | 契约升为语言无关规格 + 黑盒 conformance | conformance 对 **Bash 版**全绿 |
+| **M2** | Go 工程骨架 + `internal/platform` + 核心引擎 | conformance 对 **Go 版**（Unix）全绿 |
+| **M3** | 逐模块移植（git→gh→vim→ai→shell） | 每模块单独过 conformance |
+| **M4** | Windows 原生适配 + `shell-pwsh` 评估 | Windows CI 端到端 `init` / `install git gh` / `uninstall` |
+| **M5** | 交叉编译与发布流水线 | 三平台产物可下载运行；版本单一来源校验通过 |
+| **M6** | 分发与向后兼容 | 老用户 `EASYWORK_HOME` 无感迁移 |
+| **M7** | 测试矩阵、验收与回滚 | 三 OS 矩阵 + `-race` + conformance 全绿；回滚演练记录 |
+
+> `legacy` 归档后，`bin/easywork` 不再作为引擎，只保留薄引导脚本。
+
+### 12.8 实施状态（迁移期）
+
+| 阶段 | 状态 | 说明 |
+|---|---|---|
+| M0 决策 + spike | ✅ | 决策定稿；Bash↔Go 字节等价；5 平台交叉编译（spike 已在 M2 后删除） |
+| M1 规格 + conformance | ✅ | `docs/spec/`；`tests/conformance/`（49 用例：C1–C10 + G1 Go-only） |
+| M2 Go 骨架 + 平台抽象 | ✅ | `internal/platform`、`internal/engine` |
+| M3 模块移植 | ✅ | git/gh/vim/ai/shell，逐模块 conformance 通过 |
+| M4 Windows 原生 | ✅ | winget/scoop/choco、PowerShell profile、PATHEXT、跨平台锁；Windows Go-only conformance 入 CI |
+| M5 交叉编译发布 | ✅ | release.yml 矩阵 + checksums/attestation（不依赖 goreleaser） |
+| M6 分发与兼容 | ✅ | `bootstrap.sh` 薄引导；旧 `EASYWORK_HOME` 无感 |
+| M7 矩阵/验收/回滚 | ✅ | `go-engine` CI 三平台（Windows 含 Go conformance）+ PR `cross-compile` 6 目标；`docs/ROLLBACK.md` |
+
+> 黑盒 conformance 同时验证 Bash 与 Go（`tests/conformance/run.sh all`）。
+> G1（细粒度子组件）为 Go 起增量，Bash 引擎下自动 skip。
+
+---
+
+## 13. 细粒度组件选择（v2.x，Go 起）
+
+> 解决的问题：安装粒度只有「模块」一档，无法同时满足「只装 1 个工具」与
+> 「装一整套/一类子集」。`ai` 这类大类尤其需要子选择。
+
+### 13.0 模块命名
+
+- AI 模块正式名从 `ai-tools` **缩短为 `ai`**；`ai-tools` 保留为**兼容别名**
+  （`module` 查找、manifest 节、config 节均兼容旧名）。
+- Bash 引擎文件名仍为 `lib/ai-tools.sh`（已冻结，不背负缩写改动），
+  Go 引擎对外暴露 `ai`；conformance 用 `$EW_ENGINE` 区分。
+
+### 13.1 三层概念
+
+| 层 | 例子 | 说明 |
+|---|---|---|
+| 模块（大类） | `ai` | 顶层安装单元，必选 |
+| 子组件（选装项） | `ai/claude` | 可选声明（实现了 `Components()` 才有） |
+| 简写 | `claude` | 全仓库唯一时自动解析为所属模块的子组件 |
+
+### 13.2 命令语法（install）
+
+枚举**以空格分隔**（即 shell 的多个参数），**不使用逗号**；名字含空格/特殊字符时
+用引号作为单个参数传入：
+
+```bash
+ew install ai                 # 整套（全部子组件）
+ew install ai/claude          # 仅 1 个
+ew install ai/claude ai/codex # 两个（空格分隔）
+ew install claude codex       # 多个简写（空格分隔）
+ew install git ai/pi          # 混合：模块 + 子组件
+ew install "ai/my tool"       # 名字含空格（引号）
+```
+
+解析规则：
+
+- shell 已按空白分词；每个参数为一个目标：`module`、`module/component` 或 `component`。
+- 参数**原样保留**（不 trim）；`module/component` 在**首个 `/`** 处切分；
+  子组件名不得为空、不得再含 `/`、不得含控制字符（空格等可打印字符允许）。
+- 逗号是**名字的一部分**，不再是分隔符。
+- `module`（无子组件）= 该模块全部子组件；若同时给 `module/comp`，则「整模块」语义优先。
+- 未知模块 / 未知子组件 / 无法消歧的简写 → 退出码 `1`，并给出可用项提示。
+- 未在参数中出现的模块**不安装**；无参数 = 全部模块（各自全部子组件）。
+
+### 13.3 配置默认值（config.toml）
+
+- `[ai] tools = "claude codex"`（**空格分隔**）：无 CLI 显式子组件时的默认子集；
+  留空/注释 = 全部。兼容旧 `[ai_tools] tools`。
+- 优先级：**CLI 显式选择 > `ai.tools` > 全部**。
+- 仍受 `ai.install = false` 总开关约束（兼容旧 `ai_tools.install`）。
+
+### 13.4 manifest 记录
+
+`[ai]` 节新增/保留（旧 `[ai-tools]` 节仍可读）：
+
+```ini
+[ai]
+installed=true
+selected=claude,codex   # 本次请求的子集（内部以 CSV 记录）
+tools=claude            # 实际装成（已存在或安装成功）
+```
+
+### 13.5 通用性与边界
+
+- 机制在**模块接口层**（`Components()` + `Context.Selected` + `Aliases()`）实现，
+  任何模块都可声明子组件/别名；未声明子组件的模块行为不变。
+- `list`（人类输出与 `--json`）展示子组件，便于发现可选值；shell 补全包含
+  `module/component`、简写与别名。
+- **仅 Go 引擎实现**：Bash 已冻结，不追赶该特性；conformance 用 `$EW_ENGINE` 守卫。
+- `uninstall` 接受 `module/component` 语法但粒度为模块（卸载语义仍是移除整模块）。
+- 子组件名含空格时，shell 补全与 config 空格分隔表达会受限（保留为已知边界）。
+
+### 13.6 可选模块（默认不装）
+
+模块可实现 `Optional() bool`（`OptionalModule`）。标记为可选时：
+
+- `ew install`（无参数）**跳过**，避免默认装 GUI/重组件（也保护 CI/发布流水线）；
+- 仅显式 `ew install <module>` 安装；
+- 平台门控：`Platforms()` 未覆盖当前平台 → 编排层输出「跳过 X（当前平台不支持）」并继续。
+- `list` 以 `optional:true`（JSON）与「（可选，默认不装）」标注。
+
+可选工具（平台以“有支持版本”为准）：
+
+| 模块 | macOS | Linux | Windows | 安装方式 |
+|---|---|---|---|---|
+| `mole`（`mo`） | ✅ | ❌ | ✅ | brew / 官方 Windows CLI 脚本 |
+| `herdr` | ✅ | ✅ | ✅ | brew / 官方 `install.sh` / `install.ps1` |
+| `glow` | ✅ | ✅ | ✅ | brew / apt / dnf / pacman / apk / winget / scoop / choco |
+
+> 仅收 CLI 工具；GUI 应用（如终端模拟器）不进本工具。
+

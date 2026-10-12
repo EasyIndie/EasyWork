@@ -743,6 +743,22 @@ EOF
     [[ "$(cfg_get missing.key 'fallback')" == "fallback" ]]
 }
 
+@test "unit: cfg_get unescapes quoted strings written by cfg_set" {
+    cfg_set "git.identities.personal.name" 'He said "hi" \ bye'
+    [[ "$(cfg_get git.identities.personal.name)" == 'He said "hi" \ bye' ]]
+}
+
+@test "unit: cfg_get handles escaped quotes and unknown escapes" {
+    mkdir -p "$(dirname "$(ew_config_path)")"
+    cat > "$(ew_config_path)" << 'EOF'
+[shell]
+a = "say \"hi\""
+b = "path\z"
+EOF
+    [[ "$(cfg_get shell.a)" == 'say "hi"' ]]
+    [[ "$(cfg_get shell.b)" == 'path\z' ]]
+}
+
 @test "unit: cfg_get_bool normalizes values" {
     mkdir -p "$(dirname "$(ew_config_path)")"
     cat > "$(ew_config_path)" << 'EOF'
