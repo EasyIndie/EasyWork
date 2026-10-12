@@ -148,12 +148,13 @@ ew install claude codex   # 多个（简写）
 ### 可选工具
 
 以下工具**默认不装**（避免 `ew install` 默认装重组件），显式指名才安装；
-平台无支持版本时自动跳过。**仅 CLI 工具：不含 GUI 应用与终端模拟器**：
+平台无支持版本时自动跳过。**不装 GUI 应用（终端模拟器除外）**：
 
 ```bash
 ew install glow        # 终端 Markdown 渲染（全平台）
 ew install herdr       # Agent 运行时（全平台）
 ew install mole        # macOS 清理与优化（macOS / Windows，命令 mo）
+ew install ghostty     # Ghostty 终端（macOS / Linux，终端模拟器）
 ```
 
 `ew list` 会以「（可选，默认不装）」标注。

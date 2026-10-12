@@ -9,7 +9,7 @@ load helpers
     local mods
     if [ "${EW_ENGINE:-}" = "go" ]; then
         # 优先级序：shell(10) git(20) gh(25) vim(30) ai(50) glow(55) herdr(60) mole(65) ghostty(70)
-        mods='{"name":"shell","state":"absent","ok":false},{"name":"git","state":"absent","ok":false},{"name":"gh","state":"absent","ok":false},{"name":"vim","state":"absent","ok":false},{"name":"ai","state":"absent","ok":false},{"name":"glow","state":"absent","ok":false},{"name":"herdr","state":"absent","ok":false},{"name":"mole","state":"absent","ok":false}'
+        mods='{"name":"shell","state":"absent","ok":false},{"name":"git","state":"absent","ok":false},{"name":"gh","state":"absent","ok":false},{"name":"vim","state":"absent","ok":false},{"name":"ai","state":"absent","ok":false},{"name":"glow","state":"absent","ok":false},{"name":"herdr","state":"absent","ok":false},{"name":"mole","state":"absent","ok":false},{"name":"ghostty","state":"absent","ok":false}'
     else
         mods='{"name":"shell","state":"absent","ok":false},{"name":"git","state":"absent","ok":false},{"name":"gh","state":"absent","ok":false},{"name":"vim","state":"absent","ok":false},{"name":"ai-tools","state":"absent","ok":false}'
     fi
@@ -31,6 +31,7 @@ load helpers
         want+='{"name":"codex","description":"OpenAI Codex CLI（npm: @openai/codex）"},'
         want+='{"name":"pi","description":"Pi coding agent（npm: @earendil-works/pi-coding-agent）"}]},'
         want+='{"name":"gh","description":"安装 GitHub CLI (gh)","priority":25},'
+        want+='{"name":"ghostty","description":"Ghostty 终端（macOS / Linux）","priority":70,"optional":true},'
         want+='{"name":"git","description":"配置 Git 别名和身份","priority":20},'
         want+='{"name":"glow","description":"终端 Markdown 渲染 (glow)","priority":55,"optional":true},'
         want+='{"name":"herdr","description":"Agent 运行时 (herdr)","priority":60,"optional":true},'

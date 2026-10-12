@@ -7,7 +7,7 @@ load helpers
     ew_capture list --json --offline
     local mods
     if [ "${EW_ENGINE:-}" = "go" ]; then
-        mods="ai gh git glow herdr mole shell vim"
+        mods="ai gh ghostty git glow herdr mole shell vim"
     else
         mods="shell git gh vim ai-tools"
     fi
@@ -24,10 +24,10 @@ load helpers
 
 @test "C5-status-orders-by-priority" {
     ew_capture status --json --offline
-    # shell(10) < git(20) < gh(25) < vim(30) < ai(50) < glow(55) < herdr(60) < mole(65)
+    # shell(10) < git(20) < gh(25) < vim(30) < ai(50) < glow(55) < herdr(60) < mole(65) < ghostty(70)
     local order
     if [ "${EW_ENGINE:-}" = "go" ]; then
-        order="shell git gh vim ai glow herdr mole"
+        order="shell git gh vim ai glow herdr mole ghostty"
     else
         order="shell git gh vim ai-tools"
     fi

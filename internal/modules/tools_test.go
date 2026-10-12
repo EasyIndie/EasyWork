@@ -37,9 +37,10 @@ func TestToolsPlatformSupport(t *testing.T) {
 		linux   bool
 		windows bool
 	}{
-		{moleModule{}, true, false, true}, // Mole：macOS + 官方 Windows CLI
-		{glowModule{}, true, true, true},  // glow：全平台
-		{herdrModule{}, true, true, true}, // herdr：全平台
+		{moleModule{}, true, false, true},    // Mole：macOS + 官方 Windows CLI
+		{glowModule{}, true, true, true},     // glow：全平台
+		{herdrModule{}, true, true, true},    // herdr：全平台
+		{ghosttyModule{}, true, true, false}, // Ghostty：macOS / Linux（终端模拟器）
 	}
 	for _, c := range cases {
 		got := platformSet(c.mod.Platforms())
@@ -51,7 +52,7 @@ func TestToolsPlatformSupport(t *testing.T) {
 }
 
 func TestToolsAreOptional(t *testing.T) {
-	for _, name := range []string{"glow", "herdr", "mole"} {
+	for _, name := range []string{"glow", "herdr", "mole", "ghostty"} {
 		m, ok := ByName(name)
 		if !ok {
 			t.Fatalf("%s not registered", name)

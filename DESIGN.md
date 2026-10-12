@@ -466,7 +466,7 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 
 ## 11. 可选模块（v2.x 定稿）
 
-> 定位：**CLI 工具，只保留核心**。不引入 GUI，不做通用现代 CLI 增强。
+> 定位：**开发工具，只保留核心**。不引入 GUI 应用（**终端模拟器除外**），不做通用现代 CLI 增强。
 
 ### 保留并新增
 
@@ -477,10 +477,11 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 | `mole`（可选） | macOS 清理与优化（命令 `mo`） | brew（macOS）；Windows 官方 CLI 脚本 | macOS / Windows |
 | `herdr`（可选） | Agent 运行时 | brew / 官方 `install.sh` / Windows `install.ps1` | 全平台 |
 | `glow`（可选） | 终端 Markdown 渲染 | brew / apt / dnf / pacman / apk / winget / scoop / choco | 全平台 |
+| `ghostty`（可选） | 终端模拟器（GUI） | macOS brew `--cask`；Linux 发行版包管理器；否则给指引 | macOS / Linux |
 
 > **可选模块（OptionalModule）**：默认不在 `ew install`（无参数）中安装，只有显式
 > `ew install <模块>` 才安装；且 `Platforms()` 未覆盖当前平台时由编排层跳过
-> （“仅平台有支持版本时安装”）。**仅安装 CLI 工具，不安装 GUI 应用；终端模拟器一律不安装。**
+> （“仅平台有支持版本时安装”）。**不安装 GUI 应用；终端模拟器除外（允许）。**
 > 详见 §13 与 `docs/spec/05`。
 
 ### 明确不做（需要时再单独加）
@@ -685,6 +686,7 @@ tools=claude            # 实际装成（已存在或安装成功）
 | `mole`（`mo`） | ✅ | ❌ | ✅ | brew / 官方 Windows CLI 脚本 |
 | `herdr` | ✅ | ✅ | ✅ | brew / 官方 `install.sh` / `install.ps1` |
 | `glow` | ✅ | ✅ | ✅ | brew / apt / dnf / pacman / apk / winget / scoop / choco |
+| `ghostty` | ✅ | ✅ | ❌ | macOS `brew --cask`；Linux 发行版包管理器 |
 
-> 仅收 CLI 工具；GUI 应用（如终端模拟器）不进本工具。
+> 不装 GUI 应用；**终端模拟器除外**（Ghostty 为允许项）。
 

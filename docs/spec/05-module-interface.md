@@ -27,7 +27,8 @@
   （不得报错、不得写盘），`status` 报告为「不支持」。
 - `git`/`gh`/`vim`/`ai`（别名 `ai-tools`）：全平台。`shell`：仅 `macos`/`linux`（Windows 另设
   `shell-pwsh`，见 DESIGN §12.4）。
-- 可选工具（v2.x / Go 起，仅 CLI）：`glow`/`herdr` 全平台；`mole` 仅 `macos`/`windows`。
+- 可选工具（v2.x / Go 起）：`glow`/`herdr` 全平台；`mole` 仅 `macos`/`windows`；
+  `ghostty`（终端模拟器）仅 `macos`/`linux`。
 
 ## 可选模块（v2.x / Go 起）
 
@@ -37,8 +38,8 @@
 - 仅显式 `ew install <module>` 时安装；
 - 平台门控不变：`platforms` 未覆盖当前平台 → 编排层输出「跳过 X（当前平台不支持）」并继续；
 - `list` 以 `"optional": true`（JSON，缺省省略）与「（可选，默认不装）」标注。
-- 当前可选模块：`mole` / `herdr` / `glow`（Bash 已冻结，不实现）。
-- **仅安装 CLI 工具，不安装 GUI 应用；终端模拟器一律不安装**。
+- 当前可选模块：`mole` / `herdr` / `glow` / `ghostty`（Bash 已冻结，不实现）。
+- **不安装 GUI 应用；终端模拟器除外（允许）。**
 
 ## 能力接口（语言无关）
 

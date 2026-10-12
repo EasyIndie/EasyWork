@@ -94,6 +94,14 @@ func (p PackageManager) Install(pkg string) error {
 	}
 }
 
+// InstallCask 用 brew --cask 安装（终端模拟器等以 cask 分发）；非 brew 时退回 Install。
+func (p PackageManager) InstallCask(pkg string) error {
+	if p.name == "brew" {
+		return run("brew", "install", "--cask", pkg)
+	}
+	return p.Install(pkg)
+}
+
 func run(name string, args ...string) error {
 	return exec.Command(name, args...).Run()
 }

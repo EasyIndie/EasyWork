@@ -44,9 +44,10 @@
   `[ai] tools = "claude codex"` 设默认子集；`list` 暴露子组件；manifest 记录 `selected=`/`tools=`。
   枚举以空格分隔（不再用逗号）；名字含空格/特殊字符用引号。Bash 已冻结不追赶，conformance 以 `$EW_ENGINE` 守卫（G1）
 - **可选 CLI 工具（Go 起，DESIGN §11/§13.6）**：`mole`（macOS/Windows）、`herdr`（全平台）、
-  `glow`（全平台）；仅安装 CLI，**不安装 GUI 应用**。实现 `Optional()` 的模块**默认不在 `ew install`
-  （无参数）安装**，仅显式 `ew install <tool>` 安装；且平台无支持版本时自动跳过。
-  `list` 以 `optional:true` / 「（可选，默认不装）」标注；conformance 新增 G2（Go-only）
+  `glow`（全平台）、`ghostty`（终端模拟器，macOS/Linux）；**不装 GUI 应用，终端模拟器除外**。
+  实现 `Optional()` 的模块**默认不在 `ew install`（无参数）安装**，仅显式 `ew install <tool>` 安装；
+  且平台无支持版本时自动跳过。`list` 以 `optional:true` / 「（可选，默认不装）」标注；
+  conformance 新增 G2（Go-only）
 - **`vim` 模块对等**：自动安装 Node.js/ripgrep、vim-plug、18 个插件并运行 `:PlugInstall`
 
 ### 修复

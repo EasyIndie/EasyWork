@@ -55,7 +55,7 @@ scripts/acceptance.sh # 一键验收（make acceptance）
 cmd/ew/            # Go 跨平台 CLI 入口（新引擎）
 internal/platform/ # 平台抽象（Env/PkgManager/Lock/AtomicWrite/ShellProfile）
 internal/engine/   # 核心引擎（config.toml/manifest/managed section/json）
-internal/modules/  # Go 模块（git/gh/vim/ai/shell + 可选 mole/herdr/glow，均为 CLI）
+internal/modules/  # Go 模块（git/gh/vim/ai/shell + 可选 mole/herdr/glow/ghostty）
 internal/release/  # 发布资产命名/校验/解包（update 自升级）
 internal/cli/      # 命令路由与各命令
 bootstrap.sh       # Unix curl|bash 薄引导（下载并安装二进制）
@@ -96,9 +96,9 @@ tests/conformance/ # 黑盒 conformance（同时验证 Bash 与 Go）
 - ✅ **可选模块（定稿见 DESIGN.md §11）**：新增 `gh`（自动安装 GitHub CLI）、
   `ai`（别名 `ai-tools`；自动安装 claude code / codex / pi，经 npm，离线/禁用开关可控，
   支持子组件细选 `ew install ai/claude`）
-- ✅ **可选工具模块（v2.x，Go 起，仅 CLI）**：`mole`/`herdr`/`glow`；
+- ✅ **可选工具模块（v2.x，Go 起）**：`mole`/`herdr`/`glow`/`ghostty`（终端模拟器）；
   实现 `Optional()`，默认 `ew install` 不装，显式指名才装，并按平台支持自动跳过
-- ❌ **明确不做**：GUI 应用（含终端模拟器）、editor（VS Code / Cursor）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
+- ❌ **明确不做**：GUI 应用（**终端模拟器除外**）、editor（VS Code / Cursor）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
 - 测试现状：190 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
 
 ## 7. 改动规则

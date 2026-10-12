@@ -15,6 +15,7 @@
 | `mole`（可选） | ✅ brew | ➖ | ✅ PowerShell | 仅 macOS / Windows |
 | `herdr`（可选） | ✅ brew | ✅ brew/脚本 | ✅ PowerShell | 官方 `install.sh` / `install.ps1` 回退 |
 | `glow`（可选） | ✅ brew | ✅ 包管理器 | ✅ winget/scoop/choco | 终端 Markdown |
+| `ghostty`（可选） | ✅ cask | ✅ 发行版包 | ➖ | 终端模拟器（允许的 GUI 例外） |
 | `completion` | ✅ | ✅ | ➖（待实现） | 见未完成清单 |
 | `update` 自升级 | ✅ | ✅ | ➖（待实现） | |
 
@@ -31,6 +32,7 @@
 | ripgrep 包 ID | `ripgrep` | winget:`BurntSushi.ripgrep.MSVC` | |
 | Node 包 ID | `node` | winget:`OpenJS.NodeJS.LTS` | |
 | glow 包 ID | `glow` | winget:`charmbracelet.glow` / scoop:`glow` / choco:`glow` | `PackageManager.PackageName("glow")` |
+| ghostty 安装 | brew `--cask ghostty` | — | `PackageManager.InstallCask`；macOS 幂等检测 `/Applications/Ghostty.app` |
 | 并发锁 | `O_CREATE｜O_EXCL` | 同 | 跨平台一致（不再依赖 flock） |
 | 原子写 | temp + rename | temp + rename（覆盖） | `Platform.AtomicWrite` |
 | 可执行解析 | `PATH` | `PATH` + `PATHEXT` | `exec.LookPath` |
