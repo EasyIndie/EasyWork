@@ -3,6 +3,7 @@ package modules
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -51,6 +52,9 @@ func TestGitConfigContentUsesConfigIdentity(t *testing.T) {
 }
 
 func TestResolveGitIdentityFallsBackToGitGlobal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows: 无法用无扩展名脚本 mock git（LookPath/PATHEXT）")
+	}
 	bin := t.TempDir()
 	script := "#!/usr/bin/env bash\ncase \"$3\" in\n  user.name) echo FallbackUser ;;\n  user.email) echo fallback@example.com ;;\nesac\n"
 	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0o755); err != nil {

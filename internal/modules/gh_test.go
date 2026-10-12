@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -40,6 +41,9 @@ func TestGHInstallStrategy(t *testing.T) {
 
 // TestSetupGHAptRepo 用 fake sudo/dpkg 验证官方 apt 源写入逻辑（无需 root）。
 func TestSetupGHAptRepo(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("apt 源逻辑仅 Linux；Windows 用 winget/scoop/choco")
+	}
 	dir := t.TempDir()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

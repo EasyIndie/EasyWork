@@ -21,6 +21,9 @@ func TestSetupCompletionsUpdatesStalePath(t *testing.T) {
 		t.Fatal("no completion rc files for current platform")
 	}
 	rc := rcs[0]
+	if err := os.MkdirAll(filepath.Dir(rc.path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	stale := "source /old/tmp/.easywork/completions/easywork.bash  # EasyWork completion\n"
 	if err := os.WriteFile(rc.path, []byte("export FOO=1\n"+stale), 0o644); err != nil {
 		t.Fatal(err)
