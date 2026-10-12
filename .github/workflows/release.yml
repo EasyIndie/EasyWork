@@ -156,6 +156,7 @@ jobs:
             lib/*.sh.sha256
             easywork.conf.example
             easywork.conf.example.sha256
+          overwrite_files: true
           draft: false
           prerelease: false
         env:
@@ -215,6 +216,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: dist/easywork_*
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -234,7 +236,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          gh release download "${GITHUB_REF#refs/tags/}" --pattern 'easywork_*' --dir dist
+          gh release download "${GITHUB_REF#refs/tags/}" --repo "$GITHUB_REPOSITORY" --pattern 'easywork_*' --dir dist
           cd dist
           sha256sum easywork_* > checksums.txt
           cat checksums.txt
@@ -248,5 +250,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: dist/checksums.txt
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
