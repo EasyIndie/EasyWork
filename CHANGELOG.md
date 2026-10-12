@@ -15,6 +15,11 @@
 - **黑盒 conformance**：`tests/conformance/`（57 用例：C1–C10 + G1/G2 Go-only），同时验证 Bash 与 Go
 - **跨平台 CI**：PR/push 跑 `cross-compile`（6 目标）、`gofmt`/`go vet`；
   `go-engine` 三平台（Windows 原生 + **Go-only conformance**，Unix-only 用例自动 skip）
+- **Windows 一键安装**：新增 `bootstrap.ps1`（`irm ... | iex`，PowerShell 5.1/7 真机实测通过）
+  → 安装 `ew.exe`/`easywork.exe` 并配置用户 PATH/PATHEXT
+- **升级修复**：Bash `update` 资产路径修正（`/bin/easywork` → `/easywork`，此前 404 失效）；
+  Go `update` 在 Windows 同步更新 `ew.exe`/`easywork.exe` 两个别名
+- **release 文案**：更新为 Go + 三平台 + 双一行命令；版本 `internal/version/version.go` → `0.2.0`
 - **`make install` 跨平台**：委托 `scripts/install.sh`——Unix → `/usr/local/bin`（否则 `~/.local/bin`）；
   Windows → `~/.local/bin` 的 `easywork.exe`+`ew.exe`，并确保用户 **PATH**/**PATHEXT**（`.EXE`）
 - **Windows 原生**：PowerShell `$PROFILE` 注入、winget/scoop/choco、跨平台锁与原子写

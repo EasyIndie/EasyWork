@@ -560,8 +560,8 @@ EasyWork（一套代码）
 
 - **二进制发布**（CI 矩阵，不依赖 goreleaser）：`{darwin,linux,windows} × {amd64,arm64}`，
   产物 + `checksums.txt` + Artifact Attestations；矩阵显式且可本地复现（见 `scripts/acceptance.sh`）。
-- **`curl | bash` 入口退化为薄引导**：探测 OS/arch → 下载对应二进制到 PATH → 执行；
-  不再下载 `lib/*.sh`。
+- **薄引导入口**：Unix `curl | bash bootstrap.sh`；Windows `irm bootstrap.ps1 | iex`。
+  探测 OS/arch → 下载对应二进制到 PATH（含 PATH/PATHEXT 配置）→ 执行；不再下载 `lib/*.sh`。
 - 平台包管理分发（可选）：Homebrew tap / winget manifest / Scoop bucket。
 
 ### 12.7 迁移阶段与门禁

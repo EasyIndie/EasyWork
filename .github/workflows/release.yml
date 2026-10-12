@@ -73,21 +73,28 @@ jobs:
           cat > /tmp/release-body.md << BODYEOF
           # EasyWork —— 一条命令，配置好你的开发环境
 
-          适用于 macOS / Linux 的开发环境一键配置工具。Shell 环境、Git 身份与别名、Vim IDE 即装即用。
+          适用于 macOS / Linux / Windows 的开发环境一键配置工具。Shell/PowerShell 环境、Git 身份与别名、Vim、gh、AI 工具即装即用。
 
           ---
 
           ## 🚀 快速开始
 
           \`\`\`bash
-          # 一键安装（跨平台二进制引导）
+          # macOS / Linux（含 Windows Git Bash）
           curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/${TAG_VERSION}/bootstrap.sh | bash
+          \`\`\`
 
+          \`\`\`powershell
+          # Windows（PowerShell 原生）
+          irm https://raw.githubusercontent.com/EasyIndie/EasyWork/${TAG_VERSION}/bootstrap.ps1 | iex
+          \`\`\`
+
+          \`\`\`bash
           # 配置开发环境
           ew install --yes
           \`\`\`
 
-          > 系统要求：macOS 或 Linux，bash 或 zsh，已安装 curl 和 git。
+          > 系统要求：macOS / Linux / Windows，已联网（Unix 需 curl；Windows 用系统自带 PowerShell）。
 
           ---
 
@@ -96,7 +103,7 @@ jobs:
           | 命令 | 说明 |
           |---|---|
           | \`easywork install\` | 一键安装全部组件 |
-          | \`easywork install <模块>\` | 只安装指定组件（如 \`easywork install git\`） |
+          | \`easywork install <模块[/子组件]>\` | 只安装指定组件（如 \`git\`、\`ai/claude\`、\`glow\`） |
           | \`easywork uninstall\` | 卸载全部组件 |
           | \`easywork uninstall <模块>\` | 卸载指定组件 |
           | \`easywork config\` | 查看配置文件 |
@@ -105,9 +112,11 @@ jobs:
           | \`easywork update\` | 检查并升级到最新版本 |
           | \`easywork help\` | 显示帮助信息 |
 
-          **全局选项：** \`--dry-run\` 预览 · \`--yes\` / \`-y\` 跳过确认 · \`--verbose\` / \`-v\` 详细输出
+          **全局选项：** \`--dry-run\` 预览 · \`--yes\` / \`-y\` 跳过确认 · \`--verbose\` / \`-v\` 详细输出 · \`--json\` 机器可读 · \`--offline\` 禁止联网
 
-          **模块：** shell（Shell 环境 + 别名 + 提示符）· git（身份管理 + 80+ 别名）· vim（19 插件 IDE）
+          **模块：** shell（Shell/PowerShell 环境）· git（身份 + 90+ 别名）· gh（GitHub CLI）· vim（IDE）· ai（claude/codex/pi，可细选）
+
+          **可选 CLI 工具（默认不装）：** glow · herdr · mole
 
           ---
 

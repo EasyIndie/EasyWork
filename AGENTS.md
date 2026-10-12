@@ -58,7 +58,8 @@ internal/engine/   # 核心引擎（config.toml/manifest/managed section/json）
 internal/modules/  # Go 模块（git/gh/vim/ai/shell + 可选 mole/herdr/glow，均为 CLI）
 internal/release/  # 发布资产命名/校验/解包（update 自升级）
 internal/cli/      # 命令路由与各命令
-bootstrap.sh       # curl|bash 薄引导（下载并安装二进制）
+bootstrap.sh       # Unix curl|bash 薄引导（下载并安装二进制）
+bootstrap.ps1      # Windows PowerShell 薄引导（irm|iex）
 tests/conformance/ # 黑盒 conformance（同时验证 Bash 与 Go）
 ```
 

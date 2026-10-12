@@ -5,16 +5,23 @@
 [![Version](https://img.shields.io/github/v/release/EasyIndie/EasyWork)](https://github.com/EasyIndie/EasyWork/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**一条命令，配置好你的开发环境。** 纯 Bash，零运行时依赖，macOS / Linux 通用。
+**一条命令，配置好你的开发环境。** Go 静态单二进制，零运行时依赖，macOS / Linux / Windows 通用。
 
 ---
 
 ## 快速开始
 
 ```bash
-# 安装 CLI（跨平台二进制；同时创建短命令 ew）
+# macOS / Linux（含 Windows Git Bash）
 curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash
+```
 
+```powershell
+# Windows（PowerShell 原生）
+irm https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.ps1 | iex
+```
+
+```bash
 # 轻量初始化：Shell 别名 + Git 别名，零交互、零重依赖
 ew init
 ```

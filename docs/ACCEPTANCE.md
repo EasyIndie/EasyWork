@@ -91,7 +91,11 @@ tar -xzf "easywork_${VERSION}_$(uname -s | tr 'A-Z' 'a-z')_$(uname -m | sed 's/x
 ```bash
 bash -n bootstrap.sh
 shellcheck bootstrap.sh
+# Windows 原生引导（真机/CI）：PowerShell 5.1 与 7 均可
+#   $env:EASYWORK_VERSION='0.2.0'; $env:EASYWORK_DOWNLOAD_BASE='<mirror>'
+#   Invoke-Expression (Get-Content -Raw bootstrap.ps1)   # 等价于 irm ... | iex
 # 老用户数据无感：Go 与 Bash 共享 EASYWORK_HOME/config.toml/manifest
+# 旧 Bash 用户迁移：内建 update 历史资产路径有误（404），改用 bootstrap 一行命令；Bash 引擎会自行提示
 ```
 
 ### M7 矩阵 / 回滚

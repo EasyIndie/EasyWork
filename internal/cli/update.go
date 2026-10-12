@@ -159,9 +159,15 @@ func replaceExecutable(newBin string) error {
 			return err
 		}
 		_ = os.Remove(old)
-		alias := filepath.Join(dir, "easywork.exe")
-		if _, e := os.Stat(alias); e == nil {
-			_ = copyFile(exe, alias, 0o755)
+		// 同步另一别名（安装时生成了 ew.exe 与 easywork.exe 两个独立文件）
+		for _, name := range []string{"ew.exe", "easywork.exe"} {
+			alias := filepath.Join(dir, name)
+			if alias == exe {
+				continue
+			}
+			if _, e := os.Stat(alias); e == nil {
+				_ = copyFile(exe, alias, 0o755)
+			}
 		}
 		return nil
 	}

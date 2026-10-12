@@ -514,13 +514,13 @@ cmd_update() {
     _register_temp_file "$tmp_bin"
 
     log_info "下载 ${latest_version}..."
-    if ! safe_download "${EASYWORK_RELEASE_URL}/${latest_version}/bin/easywork" "$tmp_bin"; then
+    if ! safe_download "${EASYWORK_RELEASE_URL}/${latest_version}/easywork" "$tmp_bin"; then
         log_error "下载失败，已保留当前版本"
         return $EXIT_NETWORK
     fi
 
     # Verify: try to download checksum file — if available, verify integrity
-    local sha256_url="${EASYWORK_RELEASE_URL}/${latest_version}/bin/easywork.sha256"
+    local sha256_url="${EASYWORK_RELEASE_URL}/${latest_version}/easywork.sha256"
     local sha256_file
     sha256_file="$(mktemp)" || {
         log_error "无法创建临时文件"
