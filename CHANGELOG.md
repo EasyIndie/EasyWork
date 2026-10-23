@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+（暂无）
+
+## [0.4.2] - 2026-10-23
+
 ### 新增
 
 - `ew doctor` 新增 `sleep-policy` 检查（仅 macOS）：检测 `pmset` 的
