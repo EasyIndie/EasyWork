@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EasyWork — 一条命令，配置好你的开发环境</title>
+<meta name="description" content="EasyWork 是 Go 静态单二进制的开发环境配置 CLI：声明式 config.toml，幂等安装 Shell / Git / Vim / gh / AI 工具，支持 macOS、Linux、Windows，终端用户零运行时依赖。">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="EasyWork — 一条命令，配置好你的开发环境">
+<meta property="og:description" content="Go 静态单二进制 · 声明式配置 · 幂等 · macOS / Linux / Windows">
+<meta property="og:url" content="https://easyindie.github.io/EasyWork/">
+<link rel="canonical" href="https://easyindie.github.io/EasyWork/">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="./" aria-label="EasyWork 首页">
+      <span class="brand-mark" aria-hidden="true">ew</span>
+      <span class="brand-name">EasyWork</span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="#install">安装</a>
+      <a href="#features">特性</a>
+      <a href="#keepawake">防休眠</a>
+      <a href="#commands">命令</a>
+      <a class="nav-ext" href="https://github.com/EasyIndie/EasyWork" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero wrap">
+    <p class="eyebrow">Go 静态单二进制 · 终端用户零运行时依赖 · MIT</p>
+    <h1>一条命令，<br class="br-mobile">配置好你的开发环境</h1>
+    <p class="lede">
+      EasyWork 用一份声明式 <code>config.toml</code> 把 Shell、Git、Vim、gh、AI 工具一次装好。
+      安装幂等、可回滚，macOS / Linux / Windows 同一套代码、同一套契约。
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#install">安装</a>
+      <a class="btn" href="https://github.com/EasyIndie/EasyWork/releases/latest" rel="noopener">下载二进制</a>
+      <a class="link-quiet" href="https://github.com/EasyIndie/EasyWork" rel="noopener">查看源码 →</a>
+    </div>
+    <dl class="facts">
+      <div><dt>引擎</dt><dd>Go 1.22+</dd></div>
+      <div><dt>平台</dt><dd>macOS · Linux · Windows</dd></div>
+      <div><dt>配置</dt><dd>config.toml</dd></div>
+      <div><dt>输出</dt><dd>人类可读 + <code>--json</code></dd></div>
+    </dl>
+  </section>
+
+  <section id="install" class="section wrap" aria-labelledby="install-title">
+    <header class="section-head">
+      <h2 id="install-title">安装</h2>
+      <p class="section-note">引导脚本会探测 OS/架构、下载对应二进制、校验 sha256 后装入 PATH。</p>
+    </header>
+
+    <div class="install-grid">
+      <div class="install-card">
+        <div class="code" data-copy-block>
+          <div class="code-bar">
+            <span class="code-label">macOS / Linux</span>
+            <button class="copy" type="button" aria-label="复制 macOS 与 Linux 安装命令">复制</button>
+          </div>
+          <pre><code class="cmd">curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash</code></pre>
+        </div>
+      </div>
+
+      <div class="install-card">
+        <div class="code" data-copy-block>
+          <div class="code-bar">
+            <span class="code-label">Windows · PowerShell</span>
+            <button class="copy" type="button" aria-label="复制 Windows 安装命令">复制</button>
+          </div>
+          <pre><code class="cmd">irm https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.ps1 | iex</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <ul class="notes">
+      <li>安装到 <code>/usr/local/bin</code>（可写时）或 <code>~/.local/bin</code>，并创建 <code>ew</code> / <code>easywork</code> 两个入口。</li>
+      <li>需要固定版本：<code>EASYWORK_VERSION=0.4.3</code>（macOS/Linux）或 <code>$env:EASYWORK_VERSION='0.4.3'</code>（Windows）。</li>
+      <li>校验失败会直接中止，不会覆盖已安装的二进制。</li>
+    </ul>
+  </section>
+
+  <section id="quickstart" class="section wrap" aria-labelledby="quickstart-title">
+    <header class="section-head">
+      <h2 id="quickstart-title">三步开始</h2>
+      <p class="section-note">重复执行是安全的：已经正确的部分不会被重写。</p>
+    </header>
+    <div class="code" data-copy-block>
+      <div class="code-bar">
+        <span class="code-label">终端</span>
+        <button class="copy" type="button" aria-label="复制快速开始命令">复制</button>
+      </div>
+      <pre><code><span class="c-dim"># 1. 轻量初始化：shell 别名 + git 别名，零交互</span>
+ew init
+
+<span class="c-dim"># 2. 按 config.toml 装好全套（--dry-run 可先预览）</span>
+ew install --yes
+
+<span class="c-dim"># 3. 看状态 / 诊断</span>
+ew status
+ew doctor</code></pre>
+    </div>
+  </section>
+
+  <section id="features" class="section wrap" aria-labelledby="features-title">
+    <header class="section-head">
+      <h2 id="features-title">为什么是 EasyWork</h2>
+      <p class="section-note">为「人」和「AI agent」两类使用者设计：结果可预测，状态可查询。</p>
+    </header>
+    <ul class="grid-cards">
+      <li class="card">
+        <h3>单二进制，零依赖</h3>
+        <p>发布物是静态编译的 Go 二进制，终端用户不需要 curl 之外任何运行时；下载即可用，卸载即删除。</p>
+      </li>
+      <li class="card">
+        <h3>声明式配置</h3>
+        <p>一份 <code>config.toml</code> 描述目标环境，交互只是生成配置的前端。改配置、再 <code>apply</code> 即可收敛。</p>
+      </li>
+      <li class="card">
+        <h3>幂等且可回滚</h3>
+        <p>只在自己的 managed section 内改写目标文件，保留你原有内容；首次接管前自动备份，卸载时还原。</p>
+      </li>
+      <li class="card">
+        <h3>人类与机器都友好</h3>
+        <p>默认输出可读摘要，<code>--json</code> 给出字节级稳定的信封；日志一律走 stderr，方便管道与自动化。</p>
+      </li>
+      <li class="card">
+        <h3>可选模块，按需安装</h3>
+        <p>核心只有 shell / git / gh / vim / ai；gh 之外的清理、运行时、Markdown、终端等按需显式指名安装。</p>
+      </li>
+      <li class="card">
+        <h3>设备防休眠</h3>
+        <p><code>ew keepawake</code> 用系统电源断言保护长跑任务，不需要 sudo、不改系统电源策略，状态五态可查。</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="keepawake" class="section wrap spotlight" aria-labelledby="keepawake-title">
+    <div class="spotlight-body">
+      <p class="eyebrow">新能力</p>
+      <h2 id="keepawake-title">长跑任务不被打断</h2>
+      <p>
+        <code>ew keepawake</code> 只注册系统的电源断言：macOS 用 <code>caffeinate -s</code>、Linux 用
+        <code>systemd-inhibit</code>、Windows 用 <code>SetThreadExecutionState</code>。
+        默认模式下「接电不睡、拔电照常节能」，屏幕仍按你的设置熄灭。
+      </p>
+      <ul class="ticks">
+        <li>不用 sudo，不改 <code>pmset</code> / <code>powercfg</code></li>
+        <li><code>status</code> 报告真实断言状态，而不是「进程还活着」</li>
+        <li><code>--persist</code> 写入 LaunchAgent / systemd 单元 / 计划任务，重启自动恢复</li>
+      </ul>
+      <p class="caveat">合盖仍会睡眠——这是硬件行为，任何工具都拦不住。</p>
+    </div>
+    <div class="code" data-copy-block>
+      <div class="code-bar">
+        <span class="code-label">开启并设为开机自启</span>
+        <button class="copy" type="button" aria-label="复制防休眠命令">复制</button>
+      </div>
+      <pre><code>ew keepawake on --persist
+ew keepawake status
+<span class="c-dim"># 期望  开启 mode=ac persist=on</span>
+<span class="c-dim"># 实际  active (pid 75111, backend=caffeinate)</span>
+
+<span class="c-dim"># 关掉并拆除自启</span>
+ew keepawake off</code></pre>
+    </div>
+  </section>
+
+  <section id="commands" class="section wrap" aria-labelledby="commands-title">
+    <header class="section-head">
+      <h2 id="commands-title">命令一览</h2>
+      <p class="section-note">无参数执行 <code>ew</code> 等于 <code>ew status</code>。</p>
+    </header>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">命令</th><th scope="col">说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ew init</code></td><td>轻量初始化：shell 别名 + git 别名，零交互</td></tr>
+          <tr><td><code>ew install [组件...]</code></td><td>安装全部或指定组件；<code>module/component</code> 可选子项</td></tr>
+          <tr><td><code>ew uninstall [组件]</code></td><td>卸载并还原备份，不指定则卸载全部</td></tr>
+          <tr><td><code>ew status</code></td><td>配置与各模块状态</td></tr>
+          <tr><td><code>ew doctor</code></td><td>依赖 / 网络 / 控制台编码 / 电源策略诊断</td></tr>
+          <tr><td><code>ew list</code></td><td>列出可用组件（含可选模块）</td></tr>
+          <tr><td><code>ew config get|set|edit</code></td><td>读写 <code>config.toml</code></td></tr>
+          <tr><td><code>ew keepawake on|off|status</code></td><td>设备防休眠</td></tr>
+          <tr><td><code>ew update</code></td><td>自升级（sha256 校验）</td></tr>
+          <tr><td><code>ew completion</code></td><td>安装 / 移除 / 查看 shell 补全</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="modules" class="section wrap" aria-labelledby="modules-title">
+    <header class="section-head">
+      <h2 id="modules-title">模块与平台</h2>
+      <p class="section-note">核心模块默认安装；可选模块只在显式指名时安装。</p>
+    </header>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">模块</th><th scope="col">作用</th><th scope="col">macOS</th><th scope="col">Linux</th><th scope="col">Windows</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>shell</code></td><td>Shell 环境与安全别名</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td><code>git</code></td><td>Git 身份与别名</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td><code>gh</code></td><td>GitHub CLI</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td><code>vim</code></td><td>Vim IDE 配置</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td><code>ai</code></td><td>claude code / codex / pi</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr class="row-optional"><td><code>keepawake</code></td><td>设备防休眠</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr class="row-optional"><td><code>glow</code></td><td>终端 Markdown 渲染</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr class="row-optional"><td><code>herdr</code></td><td>Agent 运行时</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr class="row-optional"><td><code>mole</code></td><td>macOS 清理与优化</td><td>✓</td><td>—</td><td>✓</td></tr>
+          <tr class="row-optional"><td><code>ghostty</code></td><td>终端模拟器</td><td>✓</td><td>✓</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-foot">斜体行为可选模块（默认不装）。不安装 GUI 应用，终端模拟器是唯一例外。</p>
+  </section>
+
+  <section id="trust" class="section wrap" aria-labelledby="trust-title">
+    <header class="section-head">
+      <h2 id="trust-title">可验证，不靠信任</h2>
+    </header>
+    <ul class="grid-cards compact">
+      <li class="card">
+        <h3>完整性校验</h3>
+        <p>发布附带 <code>checksums.txt</code>；<code>ew update</code> 与引导脚本都会校验 sha256，不匹配即中止。</p>
+      </li>
+      <li class="card">
+        <h3>构建来源证明</h3>
+        <p>发布资产带 build provenance attestation，可用 <code>gh attestation verify</code> 校验来源。</p>
+      </li>
+      <li class="card">
+        <h3>三平台 CI</h3>
+        <p>每次提交跑 macOS / Linux / Windows 单测与黑盒 conformance，以及 6 个目标交叉编译。</p>
+      </li>
+      <li class="card">
+        <h3>数据格式稳定</h3>
+        <p><code>config.toml</code>、manifest 与 managed section 标记跨版本不变，升降级无需迁移。</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="docs" class="section wrap" aria-labelledby="docs-title">
+    <header class="section-head">
+      <h2 id="docs-title">文档与源码</h2>
+    </header>
+    <ul class="link-grid">
+      <li><a href="https://github.com/EasyIndie/EasyWork/tree/main/docs/spec" rel="noopener"><span>接口规格</span><small>语言无关契约：config / manifest / CLI / 模块</small></a></li>
+      <li><a href="https://github.com/EasyIndie/EasyWork/blob/main/README.md" rel="noopener"><span>README</span><small>安装、命令、配置示例</small></a></li>
+      <li><a href="https://github.com/EasyIndie/EasyWork/blob/main/CHANGELOG.md" rel="noopener"><span>更新日志</span><small>版本变更与移除项</small></a></li>
+      <li><a href="https://github.com/EasyIndie/EasyWork/blob/main/CONTRIBUTING.md" rel="noopener"><span>贡献指南</span><small>开发环境、测试与提交规范</small></a></li>
+      <li><a href="https://github.com/EasyIndie/EasyWork/releases" rel="noopener"><span>Releases</span><small>各平台二进制与校验文件</small></a></li>
+      <li><a href="https://github.com/EasyIndie/EasyWork/blob/main/docs/spec/08-keepawake.md" rel="noopener"><span>防休眠规格</span><small>五态判定、平台差异与边界</small></a></li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>EasyWork · MIT License · 用 Go 写的开发环境配置工具</p>
+    <p class="footer-links">
+      <a href="https://github.com/EasyIndie/EasyWork" rel="noopener">GitHub</a>
+      <a href="https://github.com/EasyIndie/EasyWork/releases/latest" rel="noopener">下载</a>
+      <a href="https://github.com/EasyIndie/EasyWork/issues" rel="noopener">反馈</a>
+    </p>
+  </div>
+</footer>
+
+<script src="assets/app.js" defer></script>
+</body>
+</html>

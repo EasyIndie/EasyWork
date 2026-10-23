@@ -34,6 +34,7 @@ make install      # 安装（Unix: /usr/local/bin 或 ~/.local/bin；Windows: %U
 make install-e2e  # bootstrap + update 本地镜像端到端（不触网；Windows 用 scripts/bootstrap-e2e.ps1）
 make acceptance   # 一键验收（静态检查/单测/conformance/交叉编译/安装链路/退役不变量）
 make retire-check # 断言 Bash 引擎没有复活
+make site         # 本地预览产品页（http://127.0.0.1:8765）
 ```
 
 ## 4. 目录结构
@@ -50,6 +51,7 @@ internal/version/  # 唯一版本来源
 docs/spec/         # 契约规格（规范性，语言无关）
 tests/conformance/ # 黑盒 conformance（唯一门禁，只测 Go）
 scripts/           # 引导/安装/验收/端到端脚本
+site/              # GitHub Pages 产品页（纯静态，无构建步骤）
 bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 ```
 

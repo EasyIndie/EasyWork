@@ -7,6 +7,8 @@
 
 **一条命令，配置好你的开发环境。** Go 静态单二进制，零运行时依赖，macOS / Linux / Windows 通用。
 
+> 产品页：https://easyindie.github.io/EasyWork/ ｜ 本地预览：`make site`
+
 ---
 
 ## 快速开始

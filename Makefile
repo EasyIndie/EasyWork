@@ -1,4 +1,4 @@
-.PHONY: lint test fmt fmt-check check check-all install clean help dry-run conform build gotest acceptance update-e2e bootstrap-e2e install-e2e retire-check
+.PHONY: lint test fmt fmt-check check check-all install clean help dry-run conform build gotest acceptance update-e2e bootstrap-e2e install-e2e retire-check site
 
 # ── EasyWork Makefile ──────────────────────────────────────────
 #
@@ -80,6 +80,10 @@ dry-run: build ## Preview what easywork install would do
 
 conform: ## Run black-box conformance（Go）
 	bash tests/conformance/run.sh go
+
+site: ## Preview the product page locally (http://127.0.0.1:8765)
+	@echo "==> http://127.0.0.1:8765/ （Ctrl+C 结束）"
+	@python3 -m http.server 8765 --bind 127.0.0.1 --directory site
 
 install: build ## Install Go CLI (Unix: /usr/local/bin; Windows: ~/.local/bin + PATH/PATHEXT)
 	@bash scripts/install.sh
