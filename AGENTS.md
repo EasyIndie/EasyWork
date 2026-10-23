@@ -51,7 +51,7 @@ internal/version/  # 唯一版本来源
 docs/spec/         # 契约规格（规范性，语言无关）
 tests/conformance/ # 黑盒 conformance（唯一门禁，只测 Go）
 scripts/           # 引导/安装/验收/端到端脚本
-site/              # GitHub Pages 产品页（纯静态，无构建步骤）
+site/              # 产品页（纯静态，无构建步骤）→ https://easywork.jokerhub.cn/
 bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 ```
 
