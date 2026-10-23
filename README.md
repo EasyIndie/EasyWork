@@ -12,7 +12,7 @@
 ## 快速开始
 
 ```bash
-# macOS / Linux（含 Windows Git Bash）
+# macOS / Linux（Windows 请在 PowerShell 用下方命令，或在 Git Bash 中运行本行）
 curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash
 ```
 
@@ -222,16 +222,16 @@ ew uninstall shell           # 只卸载指定组件
 - **引擎**：Go（`cmd/ew` + `internal/*`），静态单文件，macOS / Linux / Windows 同一套代码、
   同一套契约。
 - **安装入口**：`bootstrap.sh`（`curl | bash`）下载并安装对应平台二进制。
-- **Bash 引擎**：迁移期保留作**等价性 oracle**（已冻结，仅安全修复），即将退役；
-  前置条件与步骤见 [docs/RETIREMENT.md](docs/RETIREMENT.md)，可用 `make retire-check` 检查。
+- **单一引擎**：Bash 实现已于 **0.3.0 退役**（存档 tag `legacy-bash-0.3.0`，
+  执行记录见 [docs/RETIREMENT.md](docs/RETIREMENT.md)）；`make retire-check` 断言其不会复活。
 - **规格与验收**：语言无关契约见 [docs/spec/](docs/spec/)；验收见
   [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
 
 ## 开发
 
 ```bash
-make check    # lint + 格式化检查 + 测试
-make test     # 运行测试
+make check    # lint + 格式化检查 + go test + conformance + 安装链路
+make test     # 黑盒 conformance（Go）
 make install  # 安装 Go CLI（Unix: /usr/local/bin 或 ~/.local/bin；Windows: ~/.local/bin + PATH）
 make dry-run  # 预览安装
 ```

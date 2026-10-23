@@ -1,6 +1,9 @@
 # EasyWork v2 设计草案
 
-> 状态：**契约已冻结并落地；跨平台迁移进行中（见 §12）**
+> **历史文档**：本文记录 v2 设计与 Go 迁移决策。**Bash 引擎已于 0.3.0 退役**
+> （见 §15 与 `docs/RETIREMENT.md`），现行行为以 `docs/spec/` 为准。
+>
+> 状态：**契约已冻结并落地；Go 迁移完成、Bash 已移除（见 §12 / §15）**
 > 目的：在进入「AI 时代 · 人 + AI 双受众」改造前，冻结五个中间契约，
 > 使后续各子功能（声明式配置、JSON 输出、模块声明化、新模块、安全强化）
 > 能够并行开发而不互相干扰。
@@ -15,7 +18,7 @@
 
 ### 1.1 现状
 
-EasyWork 是一套纯 Bash 的开发环境配置 CLI，核心能力：
+EasyWork 是一套开发环境配置 CLI（v2 起为 Go 静态单二进制；本节描述 v2 改造前的 Bash 形态），核心能力：
 
 - `curl | bash` 一键安装，模块自动发现（`MODULE_NAME`/`DESCRIPTION`/`PRIORITY` + `module_install`/`module_uninstall`）
 - 幂等 managed section、manifest 状态追踪、备份/还原
@@ -45,7 +48,7 @@ EasyWork 是一套纯 Bash 的开发环境配置 CLI，核心能力：
 - `easywork` 作为兼容别名（symlink）保留，两者完全等价；项目名仍为 **EasyWork**。
 - 影响面：
   - 仓库可执行文件更名为 `bin/ew`，安装时同时创建 `easywork` 软链
-  - 一键安装：`curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bin/ew | bash`
+  - 一键安装：`curl -sL .../bootstrap.sh | bash`（Bash 引擎退役前的管道入口为 `bin/ew`）
   - shell 补全同时覆盖 `ew` 与 `easywork`
   - 自更新路径同时识别 `ew` / `easywork`
   - 内部标识不变：`EASYWORK_*` 环境变量、`MODULE_*`、`EASYWORK_HOME`、仓库名
@@ -442,7 +445,7 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 
 | 契约 / 批次 | 状态 | 落地位置 |
 |---|---|---|
-| 契约一 `EASYWORK_HOME` | ✅ | `lib/common.sh` 的 `ew_*` 路径函数 |
+| 契约一 `EASYWORK_HOME` | ✅ | `internal/platform/env.go`（原 `lib/common.sh`，Bash 已退役） |
 | 契约二 config.toml | ✅（主配置） | `cfg_get` / `cfg_get_bool` / `cfg_set` / `cfg_valid` / `config_migrate`；`ew config get/set` |
 | 契约三 manifest | ✅ | `schema_version` + `manifest_module_state` |
 | 契约四 CLI / JSON | ✅ | `--json` 信封、`json_escape`、`version`/`list`/`status`/`doctor` |
@@ -578,7 +581,7 @@ EasyWork（一套代码）
 | **M6** | 分发与向后兼容 | 老用户 `EASYWORK_HOME` 无感迁移 |
 | **M7** | 测试矩阵、验收与回滚 | 三 OS 矩阵 + `-race` + conformance 全绿；回滚演练记录 |
 
-> `legacy` 归档后，`bin/easywork` 不再作为引擎，只保留薄引导脚本。
+> `legacy` 归档后，`bin/easywork` 不再作为引擎；0.3.0 起已删除，只保留 `bootstrap.sh` / `bootstrap.ps1` 薄引导。
 
 ### 12.8 实施状态（迁移期）
 
@@ -593,8 +596,9 @@ EasyWork（一套代码）
 | M6 分发与兼容 | ✅ | `bootstrap.sh` 薄引导；旧 `EASYWORK_HOME` 无感 |
 | M7 矩阵/验收/回滚 | ✅ | `go-engine` CI 三平台（Windows 含 Go conformance）+ PR `cross-compile` 6 目标；`docs/ROLLBACK.md` |
 
-> 黑盒 conformance 同时验证 Bash 与 Go（`tests/conformance/run.sh all`）。
-> G1（细粒度子组件）为 Go 起增量，Bash 引擎下自动 skip。
+> 迁移期黑盒 conformance 同时验证 Bash 与 Go（`tests/conformance/run.sh all`）；
+> 0.3.0 起 Bash 退役，门禁收敛为 `tests/conformance/run.sh go`。
+> G1（细粒度子组件）与 C11（设备防休眠）为 Go 独有能力。
 
 ---
 
@@ -752,3 +756,40 @@ plist / systemd unit 是整体文件，无法使用 managed section。新增
 - 生成的脚本/启动器保持纯 ASCII（PowerShell 5.1 按 ANSI 解析无 BOM 文件）；
 - `mode`/`display` 变更必须重启后端，不能当作幂等；
 - EasyWork 自有资产覆盖不产生 `.bak`。
+
+---
+
+## 15. Bash 引擎退役（0.3.0）
+
+> 执行记录与前置条件核对见 [`docs/RETIREMENT.md`](docs/RETIREMENT.md)。
+
+### 15.1 触发条件
+
+- Go 引擎连续 2 个 release（0.2.0 / 0.2.1）无反回滚事故；
+- conformance 在 Bash 与 Go 双实现上全绿（65×2）；
+- 用户数据契约稳定：`EASYWORK_HOME` / `config.toml` / `manifest` / managed section 逐字节不变。
+
+### 15.2 退役前补的门禁
+
+| 门禁 | 原因 | 落点 |
+|---|---|---|
+| `bootstrap.sh` 端到端 | 退役后它是 Unix 唯一安装入口，此前只有 `bash -n` | `scripts/bootstrap-e2e.sh`（本地镜像：指定版本 / latest 解析 / 篡改拦截） |
+| sha256 完整性校验 | 原 `bootstrap.sh` 只下载不校验 | `verify_checksum()`；缺失 checksums 时告警跳过 |
+| update 自升级进 CI | 退役后升级只剩这条链路 | `install-e2e` job（`make check` 亦覆盖） |
+| 迁入 4 条 e2e 断言 | Bash 白盒测试删除后避免覆盖缺口 | C4-init / C5-single-module / C6-partial-uninstall / C6-dry-run |
+
+### 15.3 删除清单
+
+`bin/easywork`、`lib/*.sh`、`MODULES`、`easywork.conf.example`、
+`tests/test_*.bats`（192 用例）、`tests/helpers/mocks.bash`、`tests/run.sh`。
+
+### 15.4 守卫
+
+`make retire-check`（`scripts/retire-check.sh`）语义反转为**不变量检查**：
+断言旧文件不复活、`bootstrap.sh` 带完整性校验、conformance/release/CI/Makefile 只针对 Go。
+
+### 15.5 影响
+
+- 用户无迁移：同一 `EASYWORK_HOME`，`bootstrap.sh` 安装的二进制直接接管；
+- 失去的能力仅"Bash 自下载库文件"的管道安装（由 `bootstrap.sh` 取代）；
+- 回滚：`git checkout legacy-bash-0.3.0`。

@@ -15,8 +15,8 @@
 
 ### 注册顺序（不变量）
 
-- 注册顺序 = 模块**源文件名的字母序**（Bash：`_discover_modules` 扫描 `lib/*.sh`，
-  跳过 `common.sh`/`completions.sh`/`install.sh`）。
+- 注册顺序 = 注册表声明顺序（Go：`internal/modules/module.go` 的 `registry` 切片，
+  按模块名字母序维护；Bash 时代的 `lib/*.sh` 扫描顺序为其来源，Bash 已于 0.3.0 退役）。
 - `list` 按注册顺序输出；`status` 按 `priority` 升序（同优先级保持注册顺序）。
 - 重复注册同名模块为 no-op（首个生效）。
 - 非法名字 → 报错并退出 `1`。
@@ -38,7 +38,7 @@
 - 仅显式 `ew install <module>` 时安装；
 - 平台门控不变：`platforms` 未覆盖当前平台 → 编排层输出「跳过 X（当前平台不支持）」并继续；
 - `list` 以 `"optional": true`（JSON，缺省省略）与「（可选，默认不装）」标注。
-- 当前可选模块：`mole` / `herdr` / `glow` / `ghostty`（Bash 已冻结，不实现）。
+- 当前可选模块：`mole` / `herdr` / `glow` / `ghostty` / `keepawake`（设备防休眠，见 [08](08-keepawake.md)）。
 - **不安装 GUI 应用；终端模拟器除外（允许）。**
 
 ## 能力接口（语言无关）
@@ -82,7 +82,7 @@
 - `list` 的 JSON 中此类模块附加可选字段 `components`（见契约四）；
   人类输出缩进展示。
 - manifest 可记录 `selected=`（请求子集）与 `tools=`（实际装成）。
-- **语言归属**：Bash 实现已冻结，不实现本增量；conformance 用 `$EW_ENGINE` 守卫（G1，仅 Go）。
+- **语言归属**：Go 实现提供（G1）；conformance 用 `$EW_ENGINE` 守卫以兼容历史 Bash 引擎。
 - 模块可声明兼容别名（如 `ai` 的别名 `ai-tools`）：`module` 查找、manifest 节与
   config 节均回退旧名。
 

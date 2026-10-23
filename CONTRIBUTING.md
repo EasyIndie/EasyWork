@@ -5,7 +5,7 @@
 ## 提 Issue
 
 - 使用 GitHub Issues 提交 bug 报告或功能请求
-- 请尽可能详细描述：复现步骤、期望行为、实际行为
+- 请尽可能详细描述：复现步骤、期望行为、实际行为（`ew version`、OS/架构、`--json` 输出）
 - 如果涉及报错，请附上完整的错误输出
 
 ## 提 Pull Request
@@ -17,7 +17,7 @@
    ```
 3. 开发并确保质量通过：
    ```bash
-   make check   # 运行 lint + fmt-check + test
+   make check   # ShellCheck + shfmt + go test + conformance + 安装链路
    ```
 4. 提交 PR 到 `main` 分支
 
@@ -25,17 +25,17 @@
 
 ### 前置条件
 
-- **ShellCheck** — 静态分析
-- **shfmt** — 格式化
-- **BATS** — 测试框架
+- **Go 1.22+**（CI 用 1.24）
+- **ShellCheck** — 引导/辅助脚本静态分析
+- **shfmt** — shell 脚本格式化
+- **BATS** — 黑盒 conformance 测试框架
 
 ```bash
 # macOS
-brew install shellcheck shfmt bats-core
+brew install go shellcheck shfmt bats-core
 
 # Ubuntu/Debian
-sudo apt-get install -y shellcheck
-go install mvdan.cc/sh/v3/cmd/shfmt@latest
+sudo apt-get install -y golang shellcheck shfmt
 git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats
 sudo /tmp/bats/install.sh /usr/local
 ```
@@ -44,32 +44,45 @@ sudo /tmp/bats/install.sh /usr/local
 
 | 命令 | 说明 |
 |---|---|
-| `make lint` | ShellCheck 静态分析 |
-| `make test` | 运行 BATS 测试 |
-| `make fmt` | 自动格式化代码 |
-| `make fmt-check` | 检查格式 |
-| `make check` | 完整质量检查 |
-| `make dry-run` | 预览安装效果 |
+| `make build` | 构建到 `.build/ew` |
+| `make gotest` | Go 单元测试 |
+| `make test` | 黑盒 conformance（`tests/conformance`，只测 Go） |
+| `make lint` / `make fmt` / `make fmt-check` | shell 脚本检查与格式化 |
+| `make check` | 完整质量检查（含安装链路 e2e） |
+| `make install-e2e` | bootstrap + update 本地镜像端到端（不触网） |
+| `make acceptance` | 一键验收（含交叉编译、退役不变量） |
+| `make retire-check` | 断言 Bash 引擎没有复活 |
 
 ### 本机测试
 
 ```bash
-# 直接运行
-./bin/easywork install --dry-run --yes
+make build
+./.build/ew status            # 只读
+./.build/ew install --dry-run # 预览变更
 
 # 完整安装（注意会修改本机配置）
-sudo make install
-easywork install
+make install && ew install --yes
+
+# 防休眠（可选，需要时再开）
+./.build/ew keepawake on && ./.build/ew keepawake status
 ```
 
-## 编码规范
+## 编码规范（Go）
 
-- **ShellCheck**: 所有 `.sh` 文件必须通过 ShellCheck 检查
-- **shfmt**: 使用 `make fmt` 格式化（参数：`-i 4 -bn -ci -sr`）
-- **兼容性**: 脚本需同时兼容 bash 和 zsh
-- **测试**: 新增功能应添加对应的 BATS 测试
-- **命名**: 函数名使用下划线分隔风格（如 `_validate_email`），常量使用大写
-- **错误处理**: 关键操作检查返回值并给出明确的错误信息
+- **平台差异**集中在 `internal/platform`，业务代码不散落 `runtime.GOOS` 分支
+- **可测试性**：外部命令/电源/时间等副作用通过注入（`Runner` 等）隔离，
+  单测不得改动宿主真实状态
+- **错误信息**给出「可复制的修复命令」，而非术语
+- **JSON/日志分流**：数据走 stdout、日志走 stderr；`--json` 的字节格式是契约
+- **文档**：改行为先改 `docs/spec/`；模块新增请同时补 `*_test.go`
+
+## 编码规范（Shell）
+
+仓库内 shell 仅剩引导/安装/验收脚本（`bootstrap.sh`、`scripts/*.sh`）：
+
+- 必须通过 ShellCheck 与 `shfmt -i 4 -bn -ci -sr`
+- 兼容 bash 3.2（macOS 自带）与 zsh 语法检查
+- **不要恢复** Bash 引擎（`make retire-check` 会拦）
 
 ## 许可证
 

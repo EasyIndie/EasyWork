@@ -5,122 +5,103 @@
 
 ## 1. 项目一句话
 
-**EasyWork**：纯 Bash 的开发环境一键配置 CLI（macOS / Linux），零运行时依赖，
-`curl | bash` 即可用。当前处于 **v2 改造期**，目标是同时服务「人」与「AI agent」两类用户。
+**EasyWork**：Go 静态单二进制的开发环境一键配置 CLI（macOS / Linux / Windows），
+终端用户零运行时依赖，`curl | bash`（Unix）或 `irm | iex`（Windows）即可用。
+**Bash 引擎已于 0.3.0 退役**（存档 tag `legacy-bash-0.3.0`），现只有一套实现。
 
 ## 2. 技术约束（硬性，违反即不合格）
 
-- **Bash 3.2 兼容**（macOS 默认 bash）：禁用 `${var,,}`、关联数组、`{fd}>` 自动 fd、
-  `readarray`/`mapfile`、`local -n` 等 4.0+ 特性
-- **零运行时依赖**：核心不引入 jq/yq/node/python；config.toml 解析器必须内联自写
-- **`set -euo pipefail`** 全程开启；关键操作必须检查返回值并给出明确错误信息
-- **ShellCheck + shfmt** 必须通过（shfmt 参数：`-i 4 -bn -ci -sr`）
-- **兼容 zsh 语法检查**（CI 中 `zsh -n` 跑一遍）
+- **标准库优先**：Go 引擎不引入第三方运行时依赖（下载用 `net/http`，无 curl 依赖）；
+  可接受编译期依赖，但需在设计文档留决策记录
+- **跨三平台**：`GOOS=darwin|linux|windows`、`GOARCH=amd64|arm64` 必须全部编译通过；
+  Windows 差异（路径、PROFILE、编码、进程创建）走 `internal/platform` 抽象
+- **`gofmt` / `go vet` 全绿**；shell 脚本（`bootstrap.sh`、`scripts/*.sh`）必须过
+  ShellCheck + `shfmt -i 4 -bn -ci -sr`
+- **输出编码**：数据（JSON/版本号）走 stdout，日志走 stderr；`--json` 字节级稳定；
+  Windows 控制台编码由 `platform.EnableUTF8Console` / `platform.ConsoleOutput` 处理，勿绕过
+- **用户数据不变式**：`$EASYWORK_HOME/{config.toml,manifest}` 格式与 managed section 标记逐字节不变
 
 ## 3. 常用命令
 
 ```bash
-make check       # lint + fmt-check + test（提交前必跑）
-make lint        # ShellCheck 静态分析
-make test        # bats tests/ --recursive
-make fmt         # 自动格式化
-make build       # 构建 Go 二进制到 .build/ew
-make install     # 安装 Go CLI（跨平台，见下）
-make dry-run     # 预览安装（Go 引擎）
-./bin/easywork install --dry-run --yes   # 预览安装（Bash 引擎，仅 oracle）
+make check        # lint + fmt-check + gotest + conformance + 安装链路（提交前必跑）
+make gotest       # go test ./...
+make test         # 黑盒 conformance（tests/conformance，仅 Go）
+make lint         # ShellCheck（bootstrap.sh + scripts/）
+make fmt          # shfmt -w
+make build        # 构建到 .build/ew
+make install      # 安装（Unix: /usr/local/bin 或 ~/.local/bin；Windows: %USERPROFILE%\.local\bin）
+make install-e2e  # bootstrap + update 本地镜像端到端（不触网）
+make acceptance   # 一键验收（静态检查/单测/conformance/交叉编译/安装链路/退役不变量）
+make retire-check # 断言 Bash 引擎没有复活
 ```
-
-`make install` 委托 `scripts/install.sh`：
-- Unix：装到 `/usr/local/bin`（可写）否则 `~/.local/bin`，并建 `ew` 软链；
-- Windows（Git Bash/MSYS）：装 `easywork.exe`+`ew.exe` 到 `~/.local/bin`，
-  并确保用户 **PATH** 与 **PATHEXT**（`.EXE`）；无 `make` 时可直接 `bash scripts/install.sh`。
 
 ## 4. 目录结构
 
 ```
-bin/easywork       # CLI 入口：路径解析、模块发现、命令路由
-lib/common.sh      # 核心库：日志/系统检测/下载/manifest/config/锁/模块注册
-lib/install.sh     # install / uninstall 编排
-lib/completions.sh # bash/zsh 补全生成与注入
-lib/{shell,git,vim}.sh  # 三个模块（每个即一个开发环境组件）
-tests/*.bats       # 192 个 BATS 用例（cli/e2e/modules/noninteractive/unit）
-tests/helpers/mocks.bash  # mock 层：覆盖 HOME，mock curl/git/vim 等
-MODULES            # 模块索引（管道安装时远程拉取）
-DESIGN.md          # v2 蓝图（5 契约 + 人机体验 + 命令名）
-docs/spec/         # 5 契约的规范性语言无关规格 + 跨平台行为（黑盒 conformance 判据）
-docs/ROLLBACK.md   # 迁移期回滚指南
-docs/ACCEPTANCE.md # 验收清单（M0–M7）与决策归档
-docs/RETIREMENT.md  # Bash 退役前置条件与步骤
-scripts/acceptance.sh # 一键验收（make acceptance）
-cmd/ew/            # Go 跨平台 CLI 入口（新引擎）
-internal/platform/ # 平台抽象（Env/PkgManager/Lock/AtomicWrite/ShellProfile）
-internal/engine/   # 核心引擎（config.toml/manifest/managed section/json）
-internal/modules/  # Go 模块（git/gh/vim/ai/shell + 可选 mole/herdr/glow/ghostty）
+cmd/ew/            # CLI 入口（console 编码适配在此完成）
+internal/cli/      # 命令路由与各命令（status/install/keepawake/config/...）
+internal/engine/   # 契约实现：config.toml / manifest / managed section / owned file / JSON
+internal/modules/  # 模块（shell/git/gh/vim/ai + 可选 mole/herdr/glow/ghostty/keepawake）
+internal/platform/ # 平台抽象（Env/PkgManager/Lock/AtomicWrite/Process/Power/Console）
+internal/keepawake/ # 设备防休眠（电源断言 + 自启单元）
 internal/release/  # 发布资产命名/校验/解包（update 自升级）
-internal/cli/      # 命令路由与各命令
-bootstrap.sh       # Unix curl|bash 薄引导（下载并安装二进制）
-bootstrap.ps1      # Windows PowerShell 薄引导（irm|iex）
-tests/conformance/ # 黑盒 conformance（同时验证 Bash 与 Go）
+internal/version/  # 唯一版本来源
+docs/spec/         # 契约规格（规范性，语言无关）
+tests/conformance/ # 黑盒 conformance（唯一门禁，只测 Go）
+scripts/           # 引导/安装/验收/端到端脚本
+bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 ```
 
 ## 5. 架构要点
 
-- **规范源**：`docs/spec/` 是语言无关的契约规格，是行为等价性的唯一判据；改契约先改规格
-- **模块契约**：每个 `lib/*.sh` 模块必须声明 `MODULE_NAME`/`MODULE_DESCRIPTION`/`MODULE_PRIORITY`，
-  并实现 `module_install`/`module_uninstall`；可选 `module_check`/`module_status`/`module_doctor`
-- **模块自动发现**：`_discover_modules` 扫描 `lib/*.sh`，跳过 common/completions/install 三个库文件
-- **幂等写入**：所有目标文件（`~/.gitconfig` 等）写入必须经 `replace_managed_section`，
-  用 `>>> EasyWork managed section begin/end` 标记包裹，保留用户已有内容
-- **manifest**：`~/.easywork/manifest` 记录各模块 installed 状态（ini 风格 `[section]` + `key=value`）
-- **并发锁**：flock → shlock → mkdir 三级回退，fd=200 兼容 bash 3.2
-- **管道模式**：`IS_PIPED` 时从 GitHub 拉取库文件到 `~/.easywork/lib/v<版本>/` 缓存
+- **规范源**：`docs/spec/` 是语言无关契约，改行为先改规格，再改实现
+- **模块契约**（`internal/modules/module.go`）：
+  `Name()` / `Description()` / `Priority()` / `Platforms()` + `Install()` / `Uninstall()`；
+  可选能力：`Optional() bool`（默认不在 `ew install` 装）、`Components()`（子组件）、
+  `Aliases()`（兼容别名）。注册顺序 = `registry` 切片顺序 = `list` 输出顺序，
+  新增模块请按名字字母序插入
+- **幂等写入**：目标文件（`~/.gitconfig`、`~/.vimrc`、`.sh_config_custom`、`$PROFILE`）
+  必须经 `engine.ApplyManagedSection`，用 `>>> EasyWork managed section begin/end` 包裹；
+  plist/systemd unit 这类整体文件用 `engine.ApplyOwnedFile`（首次备份、卸载还原）
+- **manifest**：`~/.easywork/manifest` 记录模块 `installed` 状态（ini 风格）
+- **并发锁**：`platform.AcquireLock`（`O_CREATE|O_EXCL` + 陈旧回收）
+- **安装编排**：`priority` 升序；可选模块仅显式指名才装；失败不阻塞后续模块并写 `failed`
 
-## 6. 当前状态与进行中的改造（重要）
+## 6. 当前状态（0.3.0）
 
-- **DESIGN.md 是 v2 蓝图**，已冻结 5 个契约 + 人机体验三原则 + 命令名 `ew`。
-- **Batch 1～4 已完成**：
-  - ✅ **契约一 `EASYWORK_HOME`** 统一 + `ew_*` 路径派生函数
-  - ✅ **契约二 config.toml（主配置）**：`cfg_get`/`cfg_get_bool`/`cfg_set`/`cfg_valid` +
-    `config_migrate`；`config_init` 创建 config.toml，旧 ini 仅作只读回退并自动迁移；
-    `ew config get/set`
-  - ✅ **契约三 manifest**：`schema_version` + `manifest_module_state`
-  - ✅ **契约四 CLI/JSON**：`--json` 信封、`json_escape`、日志分流 stderr；
-    `version`/`list`/`status`/`doctor` 支持 `--json`；无参数 = `status` 摘要
-  - ✅ **契约五 模块引擎**：`remove_managed_section`/`apply_managed_file`/
-    `remove_managed_file`/`apply_module_files`/`remove_module_files`（声明式）
-  - ✅ **人机体验**：`ew init`（零交互轻量默认）、Git 身份自动探测不阻塞、
-    shell 分层开关（提示符/OMZ/网络工具默认关）、移除模块快捷命令
-  - ✅ **命令名**：`ew` 别名（安装时创建软链、补全覆盖 ew/easywork）
-- ✅ **config.toml 完全取代旧 ini**：`config_init` 创建 config.toml；旧 `config`（ini）仅作只读回退，
-  首次 `install` / `config edit` 自动迁移；`config get/set` 读写 config.toml
-- ✅ **可选模块（定稿见 DESIGN.md §11）**：新增 `gh`（自动安装 GitHub CLI）、
-  `ai`（别名 `ai-tools`；自动安装 claude code / codex / pi，经 npm，离线/禁用开关可控，
-  支持子组件细选 `ew install ai/claude`）
-- ✅ **可选工具模块（v2.x，Go 起）**：`mole`/`herdr`/`glow`/`ghostty`（终端模拟器）；
-  实现 `Optional()`，默认 `ew install` 不装，显式指名才装，并按平台支持自动跳过
-- ❌ **明确不做**：GUI 应用（**终端模拟器除外**）、editor（VS Code / Cursor）、modern-shell（现代 CLI 增强）、AI 会话编排器/配置管理器
-- 测试现状：190 个 BATS 用例；改完先跑 `make check`（shfmt 仅 CI 环境有）。
+- ✅ 5 个契约 + managed section 协议 + 跨平台行为（`docs/spec/`）
+- ✅ CLI/JSON 信封、`--json` 分流、退出码封闭集合
+- ✅ 可选模块：`mole` / `herdr` / `glow` / `ghostty`（终端模拟器为 GUI 例外）
+- ✅ 子组件细选（`ai/claude`、`claude` 简写）
+- ✅ **设备防休眠 `keepawake`**（`docs/spec/08-keepawake.md`，C11）：只注册电源断言、
+  零 sudo；五态 status；`--persist` 写自启单元
+- ✅ Windows 原生：`$PROFILE` 注入、winget/scoop/choco、UTF-8 控制台与管道编码适配
+- ✅ **Bash 引擎已退役**：`bin/` `lib/` `MODULES` `easywork.conf.example` 与 Bash 白盒测试已删除
+- ❌ 明确不做：GUI 应用（终端模拟器除外）、editor、modern-shell、AI 会话编排器
 
 ## 7. 改动规则
 
-1. **改契约前先改 DESIGN.md**，再改代码。
-2. **交互与执行分离**：`module_install` 内禁止 `read -r -p`；
-   交互一律由 `install` 前端在调用前完成并写回 config。
-3. **新增模块**：写 `lib/xxx.sh` → 加入 `MODULES` 索引 → 补 BATS 测试。
-4. **目标文件写入**只允许经 `replace_managed_section`，禁止手写 managed 逻辑。
-5. 新增功能必须补 BATS 用例；改动后先跑 `make check`。
+1. **改契约前先改 `docs/spec/`**，再改实现。
+2. **交互与执行分离**：`Install()` 内禁止交互；交互由 `ew install` 前端完成后写回 config。
+3. **新增模块**：`internal/modules/xxx.go` → 加入 `registry`（字母序）→ 补 `*_test.go`
+   → 视需要补 `tests/conformance/*.bats`。
+4. **目标文件写入**只允许经 engine 的声明式函数，禁止模块手写备份/标记逻辑。
+5. 新增功能必须补测试；改动后先跑 `make check`。
+6. **不要恢复 Bash 引擎**；`make retire-check` 会拦。
 
 ## 8. 测试约定
 
-- `make test` 通过 `tests/run.sh` **并行**运行各测试文件（默认并发=CPU 核数，`JOBS=N` 可覆盖）；
-  每个用例使用唯一的 `$TEST_HOME`（`mktemp -d`）以保证隔离与并行安全
-- `tests/helpers/mocks.bash` 把 `HOME` 指到临时目录，并 mock 了
-  `curl/git/vim/brew/sudo/node/networksetup/scutil`，测试不得发起真实网络请求或改动真实 `$HOME`
-- 测试 setup 将 stdin 重定向到 `/dev/null`，避免从终端运行 `make test` 时继承 tty 而阻塞
-- 模块变量（`MANIFEST_FILE`/`CONFIG_FILE`/`SH_CONFIG_FILE` 等）在 setup_mocks 中被 export 覆盖
-- 新增测试时遵循现有 `@test` 命名规范（见各 .bats 文件头）
+- `make test` = `tests/conformance/run.sh go`：黑盒，通过 `$EW_BIN` 调用二进制，
+  每个用例独立 `HOME`/`EASYWORK_HOME` 沙箱（`mktemp -d`），对 stdout 做字节级断言
+- `tests/conformance/helpers.bash` 导出 `EASYWORK_OUTPUT_ENCODING=utf8`（保证跨平台字节稳定）
+- 不发起真实网络：本地镜像端口由 `scripts/{bootstrap,update}-e2e.sh` 提供（127.0.0.1）
+- Go 单测：纯函数与可注入依赖（`Runner`/`Clock` 等），不得改动宿主真实状态
+  （如 keepawake 测试注入 fake runner，不真的起 caffeinate/launchctl）
+- CI：`shell-lint`（shellcheck+shfmt）、`install-e2e`、`go-engine`（三平台 go test +
+  conformance + Windows smoke）、`cross-compile`（6 目标）
 
 ## 9. 一句话风格要求
 
-保持与现有代码一致：中文注释/日志、函数名下划线风格（`_validate_email`）、
-常量大写（`EASYWORK_HOME`）、错误信息给出「可复制的修复命令」而非术语。
+保持与现有代码一致：中文注释/日志、英文标识符、错误信息给出「可复制的修复命令」而非术语；
+平台差异集中在 `internal/platform`，业务代码不出现 `runtime.GOOS` 分支散落。

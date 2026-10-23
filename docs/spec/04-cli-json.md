@@ -93,7 +93,7 @@
 - `modules` 按**注册顺序**（实现扫描模块文件的字母序），非优先级排序。
 - **v2.x（Go 起增量）**：声明了子组件的模块附加可选字段 `components`：
   `{"name":"ai","description":"...","priority":50,"components":[{"name":"claude","description":"..."}]}`。
-  无子组件的模块省略该字段。Bash 已冻结，模块名仍为 `ai-tools`（`ai` 为 Go 正式名，
+  无子组件的模块省略该字段。模块正式名为 `ai`（历史名 `ai-tools` 作为别名保留；
   `ai-tools` 为兼容别名，见 DESIGN §13）。
 - **v2.x（Go 起增量）**：可选模块附加 `"optional":true`（缺省省略）；`ew install`
   无参数时跳过可选模块（见契约五「可选模块」）。
@@ -113,7 +113,7 @@ ew install "ai/my tool"       # 名字含空格
 
 - 未在参数中出现的模块不安装；无参数 = 全部模块。
 - 未知模块 / 未知子组件 / 无法消歧的简写 → 退出码 `1`。
-- 优先级：CLI 显式选择 > `[ai] tools` > 全部。Bash 已冻结，不实现此语法。
+- 优先级：CLI 显式选择 > `[ai] tools` > 全部。
 
 ### `version`
 
@@ -180,7 +180,7 @@ ew install "ai/my tool"       # 名字含空格
 ## 验收点（C4）
 
 - `C4-status-shape` / `C4-list-shape` / `C4-version-shape` / `C4-doctor-shape`：
-  与 Bash 版 stdout **字节相等**（`--offline`）。
+  stdout **字节级固定**（`--offline`；Bash 引擎退役前的等价判据已转为 golden 断言）。
 - `C4-order`：status 按优先级、list 按注册顺序、doctor 检查项顺序。
 - `C4-offline`：`update` 片段为 `null`/`false`。
 - `C4-escape`：含 `"` `\` 与中文的值编码正确。

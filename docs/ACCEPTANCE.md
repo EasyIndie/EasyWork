@@ -1,7 +1,8 @@
 # 验收指南
 
-> 适用于跨平台迁移期（M0–M7）。验收 = 逐项满足下方判据，
-> 可自动化部分由 `scripts/acceptance.sh` 一键执行。
+> 适用于 **Go 单引擎**（Bash 引擎已于 0.3.0 退役，见 [RETIREMENT.md](RETIREMENT.md)）。
+> 验收 = 逐项满足下方判据，可自动化部分由 `scripts/acceptance.sh` 一键执行。
+> 下方 M0–M7 保留为迁移期历史判据。
 
 ---
 
@@ -15,13 +16,14 @@ scripts/acceptance.sh      # 或 make acceptance
 
 | 验收项 | 判据 | 对应阶段 |
 |---|---|---|
-| ShellCheck | 所有 shell 源（含 bootstrap/验收/测试脚本）零告警 | 质量门禁 |
+| ShellCheck | `bootstrap.sh` + `scripts/*.sh` 零告警 | 质量门禁 |
 | shfmt | 仓库级 `shfmt -d -i 4 -bn -ci -sr .` 无差异 | 质量门禁 |
-| BATS | `tests/*.bats` 全绿（Bash 引擎） | 回归 |
 | Go vet + test | `go vet ./...`、`go test ./...` 全绿 | M2 |
-| Conformance | `tests/conformance/run.sh all`：39 用例 × {Bash, Go} 全绿 | M1/M2/M3 |
+| Conformance | `tests/conformance/run.sh go` 全绿（69 用例） | M1/M2/M3 |
 | 交叉编译 | 6 目标 `{darwin,linux,windows}×{amd64,arm64}` 全部构建成功 | M5 |
-| Go 端到端 | 沙箱内 `status → install git shell → 标记存在 → uninstall → 标记消失` | M3/M6 |
+| Go 端到端 | 沙箱内 `status → keepawake status → install git shell → 标记存在 → uninstall → 标记消失` | M3/M6 |
+| 退役不变量 | `make retire-check`：无 Bash 残留、bootstrap 带校验、发布链路只针对 Go | 退役后 |
+| 安装链路 | `bootstrap-e2e` + `update-e2e`（本地镜像，不触网） | M5/M6 |
 
 退出码 `0` 表示无 FAIL（工具缺失记为 SKIP，不算失败）。
 
@@ -33,11 +35,10 @@ scripts/acceptance.sh      # 或 make acceptance
 
 > M0 的 spike 已在 M2 后删除；其能力（Bash↔Go 字节等价）由 conformance 套件承接。
 
-### M1 规格 + conformance（先对 Bash 全绿）
+### M1 规格 + conformance（迁移期先对 Bash 全绿，现已只跑 Go）
 ```bash
-/usr/bin/env EW_BIN=./bin/easywork bats tests/conformance/*.bats
-# 或
-bash tests/conformance/run.sh bash
+bash tests/conformance/run.sh go     # 当前唯一门禁
+# 历史：迁移期曾用 EW_ENGINE=bash 对 Bash 版跑同一套 conformance（存档 tag legacy-bash-0.3.0）
 ```
 
 ### M2/M3 Go 引擎与模块
@@ -94,13 +95,12 @@ shellcheck bootstrap.sh
 # Windows 原生引导（真机/CI）：PowerShell 5.1 与 7 均可
 #   $env:EASYWORK_VERSION='0.2.0'; $env:EASYWORK_DOWNLOAD_BASE='<mirror>'
 #   Invoke-Expression (Get-Content -Raw bootstrap.ps1)   # 等价于 irm ... | iex
-# 老用户数据无感：Go 与 Bash 共享 EASYWORK_HOME/config.toml/manifest
-# 旧 Bash 用户迁移：内建 update 历史资产路径有误（404），改用 bootstrap 一行命令；Bash 引擎会自行提示
+# 老用户数据无感：EASYWORK_HOME/config.toml/manifest 格式自 0.1.0 起不变
+# Bash 引擎用户迁移：Bash 已于 0.3.0 退役，改用 bootstrap 一行命令安装 Go 二进制即可
 ```
 
 ### M7 矩阵 / 回滚
-- CI：`lint-and-test`（Ubuntu/macOS）、`go-engine`（三平台，Windows 含 Go conformance）、
-  `cross-compile`（6 目标，PR/push）。
+- CI：`shell-lint`（Ubuntu/macOS）、`install-e2e`、`go-engine`（三平台）、`cross-compile`（6 目标）。
 - 回滚：见 [ROLLBACK.md](ROLLBACK.md)，回滚后重跑 `scripts/acceptance.sh`。
 
 ---
@@ -168,10 +168,11 @@ shellcheck bootstrap.sh
 
 | 任务 | 位置 | 覆盖 |
 |---|---|---|
-| `lint-and-test` | `.github/workflows/ci.yml` | ShellCheck + shfmt + BATS + dry-run（Ubuntu/macOS） |
-| `go-engine` | 同上 | Go 单测 + `gofmt`/`go vet` + 双实现 conformance（Unix）/ Go-only conformance + 原生冒烟（Windows） |
+| `shell-lint` | `.github/workflows/ci.yml` | ShellCheck + `bash -n` + shfmt（`bootstrap.sh` + `scripts/`，Ubuntu/macOS） |
+| `install-e2e` | 同上 | `bootstrap-e2e`（含 sha256 篡改拦截）+ `update-e2e`，本地镜像不触网 |
+| `go-engine` | 同上 | Go 单测 + `gofmt`/`go vet` + conformance（三平台）+ Windows 原生冒烟 |
 | `cross-compile` | 同上 | 6 目标（darwin/linux/windows × amd64/arm64）交叉编译（PR/push） |
-| `release` / `binaries` / `checksums` | `release.yml` | 6 目标二进制 + checksums + attestation |
+| `release` / `binaries` / `checksums` | `release.yml` | 6 目标二进制 + checksums + attestation（Bash 资产已于 0.3.0 移除） |
 
 ---
 
@@ -180,5 +181,5 @@ shellcheck bootstrap.sh
 | 编号 | 结论 | 依据 |
 |---|---|---|
 | #11 Windows 程度 | WSL2/Git Bash 保底；**原生 PowerShell + winget 为终态** | DESIGN §12.1；`shell` 模块 Windows 分支 |
-| #12 双实现成本 | **接受**，Bash 冻结为 oracle，生命周期 ≤2 release | `docs/ROLLBACK.md`；conformance 双跑 |
+| #12 双实现成本 | 迁移期**接受**（Bash 冻结为 oracle，≤2 release）；**已于 0.3.0 退役** | `docs/RETIREMENT.md`；conformance 收敛为 Go |
 | #13 签名/公证 | 第一版仅 sha256 checksums + provenance attestation；付费签名推迟到 1.0 后 | `release.yml` checksums 任务 |
