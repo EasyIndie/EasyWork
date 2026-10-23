@@ -10,6 +10,7 @@
 - **产品页（GitHub Pages）**：`site/` 下的极简静态页（无框架、无外链资源、亮/暗随系统），
   含安装命令一键复制、命令与模块一览、防休眠能力说明与文档入口；
   `.github/workflows/pages.yml` 直接部署 `site/`，`make site` 可本地预览。
+  另含 http→https 兜底（GitHub 的 “Enforce HTTPS” 未生效前仍能升级子资源与导航）。
 
 ## [0.4.3] - 2026-10-23
 

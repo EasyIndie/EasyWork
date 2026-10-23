@@ -12,6 +12,13 @@
 <meta property="og:description" content="Go 静态单二进制 · 声明式配置 · 幂等 · macOS / Linux / Windows">
 <meta property="og:url" content="https://easyindie.github.io/EasyWork/">
 <link rel="canonical" href="https://easyindie.github.io/EasyWork/">
+<!-- 兜底：GitHub 的 "Enforce HTTPS" 尚未生效时（HTTP 不做 301），把子资源与导航升级到 HTTPS -->
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<script>
+  if (location.protocol === "http:") {
+    location.replace("https://" + location.host + location.pathname + location.search);
+  }
+</script>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/style.css">
 </head>
