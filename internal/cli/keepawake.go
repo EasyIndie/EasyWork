@@ -170,7 +170,7 @@ func keepawakeHint(st keepawake.Status) string {
 		return "执行: ew keepawake on 开启（先看 docs/spec/08-keepawake.md）"
 	case keepawake.StateActive:
 		if platform.DetectOS() == platform.MacOS {
-			return "合盖仍会睡眠（M1/M2 Air 亦然），长时间任务请保持开盖"
+			return "合盖仍会睡眠（笔记本均如此），长时间任务请保持开盖"
 		}
 	}
 	return ""

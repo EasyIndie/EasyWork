@@ -165,6 +165,19 @@ persist = "false"   # 是否写入开机自启单元
     "platform": "macos" }, "error": null }
 ```
 
+### 9.1 从「手工方案」迁移
+
+旧方案常见两种组合，迁移时都要显式拆除，否则会与新自启单元并存：
+
+| 旧做法 | 拆除方式 | 注意 |
+|---|---|---|
+| 手工 LaunchAgent（如 `~/Library/LaunchAgents/keepawake.plist`，`caffeinate -imsu`） | `launchctl bootout gui/$(id -u)/<label>` + 删除 plist（建议先备份到 `$EASYWORK_HOME/legacy/`） | EasyWork 只管自己的 label，不会替你删别人的单元 |
+| `sudo pmset -a sleep 0`（AC 与电池都不睡） | 需要时 `sudo pmset -b sleep 10` 收回电池侧；AC 侧可保留 | 该设置与断言互不冲突，但笔记本上会让电池无处释放 |
+| `caffeinate` 手工进程（无自启） | `kill <pid>` | 用 `ps -Ao pid,command | grep caffeinate` 找 |
+
+迁移顺序建议：先 `ew keepawake on --persist`（新单元生效），再拆旧单元——中间窗口
+最多重叠几秒，不会出现"无人值守"的睡眠空档。
+
 ## 10. 为什么不做 `pmset` 方案（决策记录）
 
 | 维度 | `caffeinate`（本契约） | `sudo pmset -a sleep 0`（否） |
