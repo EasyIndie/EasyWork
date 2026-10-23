@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
-    name: Lint & Test (${{ matrix.os }})
+  shell-lint:
+    name: Shell lint (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -25,10 +25,8 @@ jobs:
           path: |
             /usr/local/bin/shellcheck
             /usr/local/bin/shfmt
-            /usr/local/bin/bats
-            /usr/local/libexec/bats-core
             ~/go/bin/shfmt
-          key: ${{ runner.os }}-easywork-tools-${{ hashFiles('.github/workflows/ci.yml') }}
+          key: ${{ runner.os }}-easywork-shell-tools-${{ hashFiles('.github/workflows/ci.yml') }}
 
       - name: Install ShellCheck
         shell: bash
@@ -48,58 +46,22 @@ jobs:
             sudo apt-get install -y shfmt || go install mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
           fi
 
-      - name: Install zsh
+      # Bash 引擎已于 0.3.0 退役；仅引导/辅助脚本保留 shell 检查。
+      - name: ShellCheck（bootstrap + scripts）
+        shell: bash
+        run: shellcheck bootstrap.sh scripts/*.sh
+
+      - name: Syntax Check（bash -n）
         shell: bash
         run: |
-          if ! command -v zsh >/dev/null 2>&1; then
-            sudo apt-get update -y && sudo apt-get install -y zsh
-          fi
-
-      - name: Install BATS
-        shell: bash
-        run: |
-          if command -v brew >/dev/null 2>&1; then
-            brew install bats-core
-          else
-            git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats
-            sudo /tmp/bats/install.sh /usr/local
-          fi
-
-      - name: ShellCheck
-        shell: bash
-        run: shellcheck bin/easywork lib/*.sh tests/helpers/mocks.bash
-
-      - name: Syntax Check (bash)
-        shell: bash
-        run: |
-          for f in bin/easywork lib/*.sh; do
+          for f in bootstrap.sh scripts/*.sh; do
             echo "Checking $f..."
             bash -n "$f" || exit 1
           done
 
-      - name: Syntax Check (zsh)
+      - name: Format Check（shfmt）
         shell: bash
-        run: |
-          for f in bin/easywork lib/*.sh; do
-            echo "Checking $f..."
-            zsh -n "$f" 2>/dev/null || echo "  (zsh syntax check skipped — not a zsh script)"
-          done
-
-      - name: Run Tests
-        shell: bash
-        run: tests/run.sh
-
-      - name: Dry-run Install
-        shell: bash
-        run: ./bin/easywork install --dry-run --yes
-
-      - name: Dry-run Uninstall
-        shell: bash
-        run: ./bin/easywork uninstall --dry-run --yes --remove-config
-
-      - name: Format Check
-        shell: bash
-        run: shfmt -d -i 4 -bn -ci -sr .
+        run: shfmt -d -i 4 -bn -ci -sr bootstrap.sh scripts
 
   install-e2e:
     name: Install chain e2e (${{ matrix.os }})
@@ -177,10 +139,10 @@ jobs:
             sudo /tmp/bats/install.sh /usr/local
           fi
 
-      - name: Conformance (Bash + Go, Unix)
+      - name: Conformance (Go, Unix)
         if: runner.os != 'Windows'
         shell: bash
-        run: tests/conformance/run.sh all
+        run: tests/conformance/run.sh go
 
       - name: Conformance (Go-only, Windows)
         if: runner.os == 'Windows'

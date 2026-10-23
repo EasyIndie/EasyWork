@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// Encode 生成与 Bash 实现字节一致的紧凑 JSON（无 HTML 转义，末尾换行）。
+// Encode 生成字节级固定的紧凑 JSON（无 HTML 转义，末尾换行）——格式本身即契约四。
 func Encode(v any) []byte {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)

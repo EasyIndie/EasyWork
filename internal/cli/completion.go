@@ -9,7 +9,7 @@ import (
 	"github.com/EasyIndie/EasyWork/internal/platform"
 )
 
-// completionMarker 与 Bash 实现保持一致的注入标记（避免重复注入）。
+// completionMarker 是补全注入标记（契约八/C8 的一部分，避免重复注入）。
 const completionMarker = "# EasyWork completion"
 
 type completionRC struct {

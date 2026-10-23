@@ -1,7 +1,7 @@
 package modules
 
-// gitAliasConfig 与 Bash `lib/git.sh` 的 _generate_git_config 保持一致。
-// 由此脚本提取生成，请勿手改；改动请同步 lib/git.sh（Bash 退役后直接改此处）。
+// gitAliasConfig 是 git 别名配置的唯一来源（自 Bash 时代 lib/git.sh 迁移而来，
+// Bash 已于 0.3.0 退役，此处即权威；改动请同时更新 git_aliases 相关测试）。
 const gitAliasConfig = `[diff]
     submodule = log
 

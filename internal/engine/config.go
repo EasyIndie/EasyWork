@@ -232,7 +232,7 @@ func (c Config) Set(key, value string) error {
 	return platform.AtomicWrite(c.path, []byte(strings.Join(out, "\n")+"\n"), 0o644)
 }
 
-// defaultTemplate 是新环境的默认 config.toml（与 Bash 实现一致）。
+// defaultTemplate 是新环境的默认 config.toml（格式为契约，跨版本不变）。
 const defaultTemplate = `# EasyWork 配置文件（v2）
 # 编辑: easywork config edit
 # 或:   easywork config set <键> <值>

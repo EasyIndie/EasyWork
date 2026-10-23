@@ -228,7 +228,7 @@ func (a *App) cmdInstall(args []string) int {
 		_ = a.Manifest.SetTop("easywork_version", a.Version)
 	}
 
-	// 配置 shell 补全（与 Bash 实现一致，安装后自动注入）
+	// 配置 shell 补全（安装后自动注入）
 	a.setupCompletions()
 
 	if len(failed) > 0 {

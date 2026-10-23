@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# EasyWork — Bash 退役前置检查
+# EasyWork — Bash 引擎退役不变量检查
 #
-# 断言「冻结 Bash、退役倒计时」的前置条件（见 docs/RETIREMENT.md）。
-# 退出码 0 表示可退役；非 0 表示仍有未满足项。
+# Bash 引擎已于 0.3.0 退役（存档 tag `legacy-bash-0.3.0`）。
+# 本脚本断言「退役后的仓库结构」没有回退：Bash 引擎文件不得复活、
+# 唯一安装入口是 bootstrap.sh、conformance/release 只针对 Go。
 #
-# 用法: scripts/retire-check.sh
+# 用法: scripts/retire-check.sh   （退出码 0 = 不变量成立）
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
@@ -16,51 +17,64 @@ bad() {
     FAIL=1
 }
 
-echo "== Bash 退役前置检查 =="
+echo "== Bash 退役不变量检查 =="
 
-# 1. Go 构建与单测
-if go build ./... 2> /dev/null; then ok "go build"; else bad "go build"; fi
-if go test ./... > /dev/null 2>&1; then ok "go test ./..."; else bad "go test ./..."; fi
-
-# 2. conformance 对 Bash 与 Go 均全绿
-if bash tests/conformance/run.sh all > /tmp/retire-conformance.log 2>&1; then
-    ok "conformance（Bash + Go）"
+# 1. Bash 引擎文件不得复活
+legacy_files=(bin/easywork lib/common.sh lib/install.sh MODULES easywork.conf.example tests/run.sh tests/helpers/mocks.bash)
+alive=0
+for f in "${legacy_files[@]}"; do
+    [[ -e "$f" ]] && alive=1 && bad "残留旧文件: $f"
+done
+if [[ "$alive" -eq 1 ]]; then :; else ok "无 Bash 引擎残留（bin/ lib/ MODULES 旧 ini 示例）"; fi
+if compgen -G "tests/test_*.bats" > /dev/null; then
+    bad "仍存在 Bash 白盒测试 tests/test_*.bats"
 else
-    bad "conformance（Bash + Go）；日志: /tmp/retire-conformance.log"
+    ok "无 Bash 白盒测试"
 fi
 
-# 3. 版本单一来源
-if grep -rqE 'EASYWORK_VERSION="[0-9]' bin lib 2> /dev/null; then
-    bad "Bash 仍存在硬编码版本"
+# 2. 唯一 Unix 入口是 bootstrap.sh，且带完整性校验
+if bash -n bootstrap.sh 2> /dev/null; then ok "bootstrap.sh 语法"; else bad "bootstrap.sh 语法"; fi
+if grep -q "verify_checksum" bootstrap.sh; then ok "bootstrap.sh 校验 sha256"; else bad "bootstrap.sh 缺少校验"; fi
+
+# 3. conformance 只针对 Go
+if grep -q 'IMPL" != "go"' tests/conformance/run.sh || grep -q 'EW_ENGINE="go"' tests/conformance/run.sh; then
+    ok "conformance 仅 Go"
 else
-    ok "版本单一来源（bin/lib 无硬编码）"
+    bad "conformance 仍包含 Bash 分支"
 fi
-if [[ -f VERSION ]]; then bad "VERSION 文件仍存在"; else ok "无 VERSION 文件"; fi
 
-# 4. Go 唯一入口 bootstrap.sh 可用
-if bash -n bootstrap.sh; then ok "bootstrap.sh 语法"; else bad "bootstrap.sh 语法"; fi
-
-# 5. release 流水线基于 Go 构建
+# 4. 构建/发布只针对 Go
 if grep -q "go build" .github/workflows/release.yml 2> /dev/null; then
     ok "release.yml 使用 Go 构建"
 else
     bad "release.yml 未使用 Go 构建"
 fi
-
-# 6. make install 安装 Go 二进制（委托 scripts/install.sh；不得再装 Bash 版）
-install_block="$(awk '/^install:/{f=1} f{print} f&&/^[[:space:]]*$/{exit}' Makefile)"
-if grep -q 'scripts/install.sh' <<< "$install_block" \
-    && grep -q '\.build/ew' scripts/install.sh \
-    && ! grep -qE '(^|[[:space:]])bin/easywork([[:space:]]|$)' scripts/install.sh; then
-    ok "make install 安装 Go 二进制（跨平台）"
+if grep -q "bin/easywork\|lib/\*\.sh" .github/workflows/release.yml 2> /dev/null; then
+    bad "release.yml 仍打包 Bash 资产"
 else
-    bad "make install 未正确安装 Go 二进制"
+    ok "release.yml 不含 Bash 资产"
 fi
+if grep -q "bin/easywork\|lib/\*\.sh" .github/workflows/ci.yml 2> /dev/null; then
+    bad "ci.yml 仍检查 Bash 引擎文件"
+else
+    ok "ci.yml 不含 Bash 引擎步骤"
+fi
+
+# 5. Makefile 不再有 Bash 专属目标
+if grep -qE "^(conform-bash|test-bash):" Makefile; then
+    bad "Makefile 仍有 Bash 专属目标"
+else
+    ok "Makefile 无 Bash 专属目标"
+fi
+
+# 6. 代码仍可构建与测试
+if go build ./... 2> /dev/null; then ok "go build"; else bad "go build"; fi
+if go test ./... > /dev/null 2>&1; then ok "go test ./..."; else bad "go test ./..."; fi
 
 echo ""
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "结论: 满足退役前置条件（执行前仍需 ≥2 release 无回滚）"
+    echo "结论: 退役不变量成立（Bash 引擎已彻底移除）"
 else
-    echo "结论: 暂不满足（见上）"
+    echo "结论: 存在残留或回退（见上）"
 fi
 exit "$FAIL"

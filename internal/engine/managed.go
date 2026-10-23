@@ -42,7 +42,7 @@ func BackupFile(target string) (string, error) {
 	return bak, nil
 }
 
-// RestoreBackup 用备份覆盖 target，并删除备份（等价 Bash 的 mv）。
+// RestoreBackup 用备份覆盖 target，并删除备份（等价 mv）。
 func RestoreBackup(bak, target string) error {
 	data, err := os.ReadFile(bak)
 	if err != nil {

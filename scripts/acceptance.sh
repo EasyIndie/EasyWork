@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# EasyWork — 迁移期一键验收（M0–M7）
+# EasyWork — 一键验收（Bash 引擎退役后）
 #
-# 在本地依次执行可自动化的验收项，最后打印 PASS/FAIL/SKIP 汇总。
+# 依次执行可自动化的验收项，最后打印 PASS/FAIL/SKIP 汇总。
 # 退出码：0 表示无 FAIL（SKIP 不算失败）。
 #
 # 用法: scripts/acceptance.sh
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
-ROOT="$PWD"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -39,30 +38,25 @@ skip() {
 
 shell_sources() {
     local f
-    for f in bin/easywork lib/*.sh tests/helpers/mocks.bash bootstrap.sh \
-        tests/conformance/run.sh tests/conformance/helpers.bash scripts/*.sh; do
+    for f in bootstrap.sh tests/conformance/run.sh tests/conformance/helpers.bash scripts/*.sh; do
         [[ -f "$f" ]] && printf '%s\n' "$f"
     done
 }
 
 # ── 静态检查 ────────────────────────────────────────────────
 run_shellcheck() {
-    # 路径无空格；不使用 mapfile 以兼容 bash 3.2
     # shellcheck disable=SC2046
     shellcheck $(shell_sources)
 }
 
 run_shfmt() { shfmt -d -i 4 -bn -ci -sr .; }
 
-# ── 单元测试 ────────────────────────────────────────────────
-run_bats() { bash tests/run.sh; }
-
+# ── 单元测试与黑盒 conformance ───────────────────────────────
 run_gotest() { go vet ./... && go test ./...; }
 
-# ── 黑盒 conformance（Bash + Go 字节等价） ──────────────────
-run_conformance() { bash tests/conformance/run.sh all; }
+run_conformance() { bash tests/conformance/run.sh go; }
 
-# ── 交叉编译矩阵（M5 发布目标） ─────────────────────────────
+# ── 交叉编译矩阵（发布目标） ────────────────────────────────
 _cross_once() {
     local t os arch out rel="$TMP/rel"
     mkdir -p "$rel"
@@ -85,7 +79,8 @@ run_cross() {
     _cross_once
 }
 
-# ── update 自升级端到端（本地镜像） ───────────────────────
+# ── 安装/升级链路（本地镜像） ───────────────────────────────
+run_bootstrap_e2e() { bash scripts/bootstrap-e2e.sh > /dev/null; }
 run_update_e2e() { bash scripts/update-e2e.sh > /dev/null; }
 
 # ── Go 引擎端到端冒烟（当前平台） ───────────────────────────
@@ -96,6 +91,7 @@ run_e2e() {
     mkdir -p "$home"
     local env=(env "HOME=$home" "EASYWORK_HOME=$home/.easywork" "EASYWORK_API_URL=http://127.0.0.1:1/")
     "${env[@]}" "$bin" status --json --offline | grep -q '"ok":true' || return 1
+    "${env[@]}" "$bin" keepawake status --json | grep -q '"command":"keepawake"' || return 1
     "${env[@]}" "$bin" install git shell --yes --offline > /dev/null || return 1
     grep -q 'managed section' "$home/.gitconfig" || return 1
     "${env[@]}" "$bin" uninstall git shell --yes --offline > /dev/null || return 1
@@ -103,7 +99,10 @@ run_e2e() {
     return 0
 }
 
-echo "== EasyWork 迁移期验收 =="
+# ── 退役不变量 ──────────────────────────────────────────────
+run_retire_check() { bash scripts/retire-check.sh > /dev/null; }
+
+echo "== EasyWork 验收 =="
 echo ""
 
 if have shellcheck; then
@@ -118,8 +117,6 @@ else
     skip "shfmt" "未安装 shfmt"
 fi
 
-step "BATS（Bash 单元/集成）" run_bats
-
 if have go; then
     step "Go vet + 单元测试" run_gotest
 else
@@ -127,7 +124,7 @@ else
 fi
 
 if have bats && have go; then
-    step "Conformance（Bash ↔ Go，57×2）" run_conformance
+    step "Conformance（Go）" run_conformance
 else
     skip "Conformance" "需要 bats 与 go"
 fi
@@ -135,10 +132,12 @@ fi
 if have go; then
     step "交叉编译矩阵（6 目标）" run_cross
     step "Go 引擎端到端冒烟" run_e2e
+    step "退役不变量（无 Bash 残留）" run_retire_check
     if have python3; then
+        step "bootstrap 安装（本地镜像）" run_bootstrap_e2e
         step "update 自升级（本地镜像）" run_update_e2e
     else
-        skip "update 自升级（本地镜像）" "需要 python3"
+        skip "安装/升级链路" "需要 python3"
     fi
 else
     skip "交叉编译矩阵" "未安装 go"

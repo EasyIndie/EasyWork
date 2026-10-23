@@ -19,7 +19,7 @@ func (gitModule) Priority() int            { return 20 }
 func (gitModule) Platforms() []platform.OS { return allPlatforms() }
 
 // resolveGitIdentity 按「config.toml → 已有 git config --global → 空」探测身份，
-// 与 Bash 行为一致（身份零配置可用，缺失不阻塞）。
+// 身份零配置可用：缺失不阻塞安装。
 func resolveGitIdentity(ctx *Context) (name, email string) {
 	identity := ctx.Config.Get("git.identity", "personal")
 	name = ctx.Config.Get("git.identities."+identity+".name", "")
@@ -48,7 +48,7 @@ func gitGlobalValue(key string) string {
 }
 
 // gitConfigContent 生成 ~/.gitconfig 的 managed section 内容。
-// 有完整身份时前置 [user]；否则仅别名（与 Bash _generate_git_config_resolved 一致）。
+// 有完整身份时前置 [user]；否则仅别名（保持历史行为不变）。
 func gitConfigContent(ctx *Context) string {
 	name, email := resolveGitIdentity(ctx)
 	if name != "" && email != "" {

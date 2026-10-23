@@ -45,27 +45,15 @@ jobs:
       - name: Install ShellCheck
         run: sudo apt-get update -y && sudo apt-get install -y shellcheck
 
-      - name: ShellCheck
-        run: shellcheck bin/easywork lib/*.sh
+      # Bash 引擎已于 0.3.0 退役；仓库内仅剩引导/辅助脚本需要静态检查。
+      - name: ShellCheck（bootstrap + scripts）
+        run: shellcheck bootstrap.sh scripts/*.sh
 
-      - name: Syntax Check
+      - name: Syntax Check（bootstrap + scripts）
         run: |
-          for f in bin/easywork lib/*.sh; do
+          for f in bootstrap.sh scripts/*.sh; do
             bash -n "$f" || exit 1
           done
-
-      - name: Install BATS
-        run: |
-          git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats
-          sudo /tmp/bats/install.sh /usr/local
-
-      - name: Run Tests
-        run: tests/run.sh
-
-      - name: Dry-run Verification
-        run: |
-          ./bin/easywork install --dry-run --yes
-          ./bin/easywork uninstall --dry-run --yes --remove-config
 
       - name: Generate Release Body
         run: |
@@ -73,7 +61,7 @@ jobs:
           cat > /tmp/release-body.md << BODYEOF
           # EasyWork —— 一条命令，配置好你的开发环境
 
-          适用于 macOS / Linux / Windows 的开发环境一键配置工具。Shell/PowerShell 环境、Git 身份与别名、Vim、gh、AI 工具即装即用。
+          适用于 macOS / Linux / Windows 的开发环境一键配置工具（Go 单二进制，零运行时依赖）。Shell/PowerShell 环境、Git 身份与别名、Vim、gh、AI 工具即装即用。
 
           ---
 
@@ -135,27 +123,10 @@ jobs:
           echo "" >> /tmp/release-body.md
           cat /tmp/release-body.md
 
-      - name: Generate SHA256 Checksums
-        run: |
-          cd "${{ github.workspace }}"
-          for f in bin/easywork lib/*.sh easywork.conf.example; do
-            if [ -f "$f" ]; then
-              echo "Generating checksum for $f"
-              sha256sum "$f" > "${f}.sha256"
-            fi
-          done
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           body_path: /tmp/release-body.md
-          files: |
-            bin/easywork
-            bin/easywork.sha256
-            lib/*.sh
-            lib/*.sh.sha256
-            easywork.conf.example
-            easywork.conf.example.sha256
           overwrite_files: true
           draft: false
           prerelease: false
