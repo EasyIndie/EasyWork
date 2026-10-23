@@ -468,3 +468,27 @@ func TestWriteAssetNoBackupPileUp(t *testing.T) {
 		t.Fatal("接管外部文件必须备份")
 	}
 }
+
+// on --persist 必须等断言真正登记再返回，否则紧随其后的 status 会误报 inactive。
+func TestOnPersistWaitsForAssertion(t *testing.T) {
+	ctl, r := newTestController(t, platform.MacOS)
+	spec := Spec{Enabled: true, Mode: ModeAC, Persist: true}
+	domain := launchctlDomain()
+
+	// launchctl 报告 running + pid，pmset 断言在 on 返回时已可见
+	r.run[key("launchctl", []string{"bootout", domain + "/" + Label})] = ""
+	r.run[key("launchctl", []string{"bootstrap", domain, unitFileFor(ctl.Env, spec, platform.MacOS).Path})] = ""
+	r.run[key("launchctl", []string{"print", domain + "/" + Label})] = "\tstate = running\n\tpid = 555\n"
+	r.run[key("pmset", []string{"-g", "assertions"})] = "pid 555(caffeinate): PreventSystemSleep"
+
+	if err := ctl.On(spec); err != nil {
+		t.Fatalf("On --persist 失败: %v", err)
+	}
+	st, ok := ctl.loadState()
+	if !ok || st.ManagedBy != "launchagent" {
+		t.Fatalf("状态文件不正确: %+v ok=%v", st, ok)
+	}
+	if got := ctl.Status(spec).Actual.State; got != StateActive {
+		t.Fatalf("on 返回后应立即 active，得到 %s", got)
+	}
+}

@@ -5,7 +5,11 @@
 
 ## [Unreleased]
 
-（暂无）
+### 修复
+
+- `keepawake`：`on --persist` 未等自启单元真正登记断言就返回，导致紧随其后的
+  `ew keepawake status` 在 2–3 秒内误报 `inactive`/`stale`（LaunchAgent/systemd
+  启动与断言登记是异步的）。现在会轮询到断言确认（最长 5s）再返回。
 
 ## [0.4.0] - 2026-10-23
 

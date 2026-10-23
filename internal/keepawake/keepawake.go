@@ -342,8 +342,25 @@ func (c *Controller) onPersist(spec Spec) error {
 	if err := c.saveState(st); err != nil {
 		return err
 	}
+	// launchd/systemd 启动与断言登记都是异步的：等它真正生效再返回，
+	// 否则紧随其后的 `status` 会误报 inactive/stale（实测约 2-3s 窗口）。
+	if !c.waitManagedAssertion(st) {
+		c.Log.Warn("自启单元已加载，但断言尚未确认（稍后可用 ew keepawake status 复查）")
+	}
 	c.Log.Success("防休眠已开启并设置开机自启" + pidSuffix(pid))
 	return nil
+}
+
+// waitManagedAssertion 轮询自启单元：刷新 pid 直到断言被 pmset/system 确认。
+func (c *Controller) waitManagedAssertion(st State) bool {
+	for i := 0; i < 25; i++ {
+		st = c.refreshPID(st)
+		if st.PID > 0 && c.assertionHeld(st) {
+			return true
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return false
 }
 
 func (c *Controller) onPersistWindows(spec Spec) error {
