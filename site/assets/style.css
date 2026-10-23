@@ -70,7 +70,14 @@ code {
   padding: 0.08em 0.34em;
 }
 
-pre code { background: none; border: 0; padding: 0; font-size: 0.875rem; white-space: pre; }
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 /* ── 唯一容器 ───────────────────────────────────────────── */
 
@@ -181,15 +188,17 @@ pre code { background: none; border: 0; padding: 0; font-size: 0.875rem; white-s
   overflow: hidden;
 }
 
-/* 安装命令：每行一条，各自可复制 */
-.row {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 0.7rem 0.85rem 0.7rem 1rem;
-}
+/* 安装命令：标签+复制在上，命令独占一行并自动换行（不出现横向滚动条） */
+.row { padding: 0.7rem 0.9rem 0.8rem 1rem; }
 .row + .row { border-top: 1px solid var(--line); }
+
+.row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
 
 .os {
   font-family: var(--font-mono);
@@ -200,25 +209,18 @@ pre code { background: none; border: 0; padding: 0; font-size: 0.875rem; white-s
   white-space: nowrap;
 }
 
+/* 长命令按空格优先折行，超长 URL 才在必要时断词 —— 复制内容不受影响 */
 .row .cmd {
+  display: block;
   background: none;
   border: 0;
   padding: 0;
   font-size: 0.84rem;
-  overflow-x: auto;
-  white-space: nowrap;
+  line-height: 1.55;
   color: var(--fg);
-}
-
-@media (max-width: 640px) {
-  .row {
-    grid-template-columns: max-content max-content;
-    grid-template-areas: "os copy" "cmd cmd";
-    gap: 0.3rem 0.9rem;
-  }
-  .os { grid-area: os; }
-  .copy { grid-area: copy; justify-self: end; }
-  .row .cmd { grid-area: cmd; padding-top: 0.15rem; }
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .block-head {
@@ -236,7 +238,7 @@ pre code { background: none; border: 0; padding: 0; font-size: 0.875rem; white-s
   color: var(--fg-muted);
 }
 
-.code pre { margin: 0; padding: 1rem 1.1rem; overflow-x: auto; line-height: 1.65; }
+.code pre { margin: 0; padding: 1rem 1.1rem; line-height: 1.65; }
 .dim { color: var(--fg-muted); }
 
 .copy {
@@ -285,6 +287,7 @@ pre code { background: none; border: 0; padding: 0; font-size: 0.875rem; white-s
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow-x: auto;
+  padding-bottom: 2px; /* 万一需要滚动，避免滚动条贴着最后一行文字 */
 }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
