@@ -33,3 +33,9 @@ enabled = true
 
 [ai_tools]
 install = true   # 自动安装 claude code / codex / pi（离线模式自动跳过）
+
+[keepawake]
+enabled = "false"   # 设备防休眠（长跑任务不中断）：ew keepawake on
+mode    = "ac"      # ac = 仅接电时生效；always = 电池也不睡
+display = "false"   # true = 连显示器一起防睡
+persist = "false"   # true = 写入开机自启（LaunchAgent / systemd / 计划任务）

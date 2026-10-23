@@ -240,6 +240,18 @@ func (a *App) doctorChecks() []checkItem {
 		}
 		checks = append(checks, toolCheck("zsh", "optional (Oh My Zsh 将跳过)"))
 	}
+	// 控制台编码诊断：Windows 上 ew 启动时会把代码页切到 65001，
+	// 中文仍乱码时可据此确认是终端/字体问题还是编码问题。
+	cp := platform.ConsoleCodePage()
+	detail := "utf-8 (n/a)"
+	if cp != 0 {
+		detail = "cp=" + strconv.Itoa(cp)
+		if cp != 65001 {
+			detail += " (非 UTF-8，中文可能乱码)"
+		}
+	}
+	checks = append(checks, checkItem{Name: "console", OK: cp == 0 || cp == 65001, Detail: detail})
+
 	if checkNetwork() {
 		checks = append(checks, checkItem{Name: "network", OK: true, Detail: "github.com reachable"})
 	} else {

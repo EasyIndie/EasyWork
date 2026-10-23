@@ -124,6 +124,37 @@ func (c Config) GetBool(key string, def bool) bool {
 	}
 }
 
+// Has 报告某个键是否在 config.toml 中被显式写出（用于区分「缺省」与「显式关闭」）。
+func (c Config) Has(key string) bool {
+	data, err := os.ReadFile(c.path)
+	if err != nil {
+		return false
+	}
+	wantSection, wantKey := splitKey(key)
+	cur := ""
+	for _, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			cur = strings.TrimSpace(line[1 : len(line)-1])
+			continue
+		}
+		if cur != wantSection {
+			continue
+		}
+		eq := strings.Index(line, "=")
+		if eq < 0 {
+			continue
+		}
+		if strings.TrimSpace(line[:eq]) == wantKey {
+			return true
+		}
+	}
+	return false
+}
+
 // Valid 校验 schema_version（文件不存在视为合法）。
 func (c Config) Valid() bool {
 	if _, err := os.Stat(c.path); err != nil {
@@ -222,6 +253,12 @@ install = true
 # 细粒度选择（空格分隔子工具）: claude codex pi
 # 留空/注释掉 = 全部；例: tools = "claude codex"
 # tools = "claude codex pi"
+
+[keepawake]
+enabled = false
+mode    = "ac"
+display = false
+persist = false
 `
 
 // Ensure 在 config.toml 缺失时创建（优先迁移旧 ini）。

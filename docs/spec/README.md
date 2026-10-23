@@ -21,6 +21,7 @@
 | 5 | 模块接口与声明式引擎 | [05-module-interface.md](05-module-interface.md) | 模块只声明，引擎负责写盘 |
 | 6 | Managed section 文件协议 | [06-managed-section.md](06-managed-section.md) | 标记文本逐字节固定，幂等 |
 | 7 | 跨平台行为 | [07-cross-platform.md](07-cross-platform.md) | 平台差异边界固定 |
+| 8 | 设备防休眠 `keepawake` | [08-keepawake.md](08-keepawake.md) | 只注册电源断言，不改系统策略；`status` 报告真实断言 |
 
 ---
 
@@ -68,6 +69,7 @@
 | `C8-*` | shell 补全 setup/status/remove | `tests/conformance/c8_completion.bats` |
 | `C9-*` | update 自升级（离线退出码 + 本地镜像端到端） | `tests/conformance/c9_update.bats` |
 | `C10-*` | JSON 错误信封（`ok:false` + code/message） | `tests/conformance/c10_json_error.bats` |
+| `C11-*` | 设备防休眠（`on`/`off`/`status`、`--dry-run`、可选模块标注） | `tests/conformance/c11_keepawake.bats` |
 
 测试必须：在独立 `HOME`/`EASYWORK_HOME` 沙箱运行；不发起真实网络；对 stdout 做
 **字节级**断言；对生成文件做规范化后的 golden 断言。

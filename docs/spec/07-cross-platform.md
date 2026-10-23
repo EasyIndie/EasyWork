@@ -37,6 +37,9 @@
 | 原子写 | temp + rename | temp + rename（覆盖） | `Platform.AtomicWrite` |
 | 可执行解析 | `PATH` | `PATH` + `PATHEXT` | `exec.LookPath` |
 | 换行 | LF | LF | 统一 LF（工具均可解析） |
+| 控制台编码 | UTF-8 直出 | 启动切 CP=65001 并在退出还原 | 控制台直出 UTF-8；**管道/重定向且启动 CP≠65001 时，人类可读输出转系统 ANSI 代码页**（PowerShell 5.1 / cmd 按 OEM 解码管道）；`--json` 恒为 UTF-8 |
+| 输出编码覆盖 | — | `EASYWORK_OUTPUT_ENCODING=utf8\|oem` | CI/脚本需要字节稳定时置 `utf8` |
+| ANSI 颜色 | 终端原生 | 启动时开启 `ENABLE_VIRTUAL_TERMINAL_PROCESSING` | 不支持时静默跳过 |
 | `doctor` 检查 | curl/git/awk/sed/zsh/network | git/curl/node/npm/network | 按平台生成 |
 
 ## 工具依赖（用户侧）
@@ -57,6 +60,8 @@
 - `C7-vim-paths`：Windows 写 `_vimrc` 与 `vimfiles/`；Unix 写 `.vimrc` 与 `.vim/`。
 - `C7-pkg-map`：`PackageName` 映射（winget `GitHub.cli` 等）。
 - `C7-doctor`：Windows 不检查 awk/sed/zsh；Unix 检查。
+- `C7-console`：`doctor` 报告 `console` 项（Windows 为 `cp=65001`，Unix 为 `utf-8 (n/a)`）。
+- `C7-win-output`：Windows 管道下人类输出按 ANSI 代码页编码；`--json` 与 `EASYWORK_OUTPUT_ENCODING=utf8` 下恒为 UTF-8。
 
 ## `gh` 安装回退
 

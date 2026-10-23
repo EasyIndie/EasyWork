@@ -109,6 +109,13 @@ func Run(args []string) int {
 	app := New()
 	cleanupStaleBinary()
 	rest := app.parseFlags(args)
+	// Windows：管道/重定向且控制台代码页非 UTF-8 时，人类可读输出转成系统 ANSI
+	// 代码页（PowerShell 5.1 / cmd 按 OEM 解码管道，否则中文乱码）。
+	// --json 一律保持 UTF-8，不经过该适配。
+	if !app.JSON {
+		app.Log.Out = platform.ConsoleOutput(app.Log.Out)
+		app.Log.Err = platform.ConsoleOutput(app.Log.Err)
+	}
 	return app.Dispatch(rest)
 }
 
@@ -161,6 +168,8 @@ func (a *App) Dispatch(args []string) int {
 		return 0
 	case "completion", "comp":
 		return a.cmdCompletion(rest)
+	case "keepawake", "awake", "nosleep":
+		return a.cmdKeepawake(rest)
 	default:
 		if _, ok := modules.ByName(cmd); ok {
 			a.Log.Info("请使用: ew install " + cmd)
@@ -188,6 +197,7 @@ func (a *App) printHelp() {
   doctor                环境诊断
   list                  列出可用组件
   config get/set/edit   配置管理
+  keepawake on/off      设备防休眠（长跑任务不中断）
   version               查看版本
   version / update      查看与升级
   help                  帮助

@@ -8,8 +8,8 @@ load helpers
     [ "$EW_RC" -eq 0 ]
     local mods
     if [ "${EW_ENGINE:-}" = "go" ]; then
-        # 优先级序：shell(10) git(20) gh(25) vim(30) ai(50) glow(55) herdr(60) mole(65) ghostty(70)
-        mods='{"name":"shell","state":"absent","ok":false},{"name":"git","state":"absent","ok":false},{"name":"gh","state":"absent","ok":false},{"name":"vim","state":"absent","ok":false},{"name":"ai","state":"absent","ok":false},{"name":"glow","state":"absent","ok":false},{"name":"herdr","state":"absent","ok":false},{"name":"mole","state":"absent","ok":false},{"name":"ghostty","state":"absent","ok":false}'
+        # 优先级序：shell(10) git(20) gh(25) vim(30) ai(50) glow(55) herdr(60) mole(65) ghostty(70) keepawake(75)
+        mods='{"name":"shell","state":"absent","ok":false},{"name":"git","state":"absent","ok":false},{"name":"gh","state":"absent","ok":false},{"name":"vim","state":"absent","ok":false},{"name":"ai","state":"absent","ok":false},{"name":"glow","state":"absent","ok":false},{"name":"herdr","state":"absent","ok":false},{"name":"mole","state":"absent","ok":false},{"name":"ghostty","state":"absent","ok":false},{"name":"keepawake","state":"absent","ok":false}'
     else
         mods='{"name":"shell","state":"absent","ok":false},{"name":"git","state":"absent","ok":false},{"name":"gh","state":"absent","ok":false},{"name":"vim","state":"absent","ok":false},{"name":"ai-tools","state":"absent","ok":false}'
     fi
@@ -35,6 +35,7 @@ load helpers
         want+='{"name":"git","description":"配置 Git 别名和身份","priority":20},'
         want+='{"name":"glow","description":"终端 Markdown 渲染 (glow)","priority":55,"optional":true},'
         want+='{"name":"herdr","description":"Agent 运行时 (herdr)","priority":60,"optional":true},'
+        want+='{"name":"keepawake","description":"设备防休眠（长跑任务不中断）","priority":75,"optional":true},'
         want+='{"name":"mole","description":"macOS 清理与优化 (mole/mo)","priority":65,"optional":true},'
         want+='{"name":"shell","description":"配置 Shell 环境 (bash/zsh 适配)","priority":10},'
         want+='{"name":"vim","description":"配置 Vim IDE","priority":30}],'

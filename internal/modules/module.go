@@ -137,15 +137,16 @@ func allPlatforms() []platform.OS {
 // registry 的**顺序必须**与 Bash `_discover_modules` 扫描 lib/*.sh 的字母序一致，
 // 因为 list --json 直接按注册顺序输出。
 var registry = []Module{
-	aiModule{},      // ai（别名 ai-tools）
-	ghModule{},      // gh
-	ghosttyModule{}, // ghostty（可选，终端模拟器）
-	gitModule{},     // git
-	glowModule{},    // glow（可选，CLI）
-	herdrModule{},   // herdr（可选，CLI）
-	moleModule{},    // mole（可选，CLI）
-	shellModule{},   // shell
-	vimModule{},     // vim
+	aiModule{},        // ai（别名 ai-tools）
+	ghModule{},        // gh
+	ghosttyModule{},   // ghostty（可选，终端模拟器）
+	gitModule{},       // git
+	glowModule{},      // glow（可选，CLI）
+	herdrModule{},     // herdr（可选，CLI）
+	keepawakeModule{}, // keepawake（可选，设备防休眠）
+	moleModule{},      // mole（可选，CLI）
+	shellModule{},     // shell
+	vimModule{},       // vim
 }
 
 // All 返回按注册顺序排列的模块。

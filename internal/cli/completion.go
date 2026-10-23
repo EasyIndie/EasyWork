@@ -266,7 +266,7 @@ _easywork() {
 
     local global_opts="--yes -y --dry-run --verbose -v --json --offline"
     local uninstall_opts="--keep-config --remove-config"
-    local commands="init install uninstall config version status list doctor update help completion"
+    local commands="init install uninstall config version status list doctor update help completion keepawake"
     local modules="` + mods + `"
 
     local cmd=""

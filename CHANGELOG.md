@@ -3,10 +3,31 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased] — 跨平台引擎（Go）
+## [Unreleased]
+
+（暂无）
+
+## [0.3.0] - 2026-10-23
+
+### 新增
+
+- **设备防休眠 `keepawake`（可选模块 + `ew keepawake on/off/status`）**：
+  只注册电源断言（macOS `caffeinate -s` / Linux `systemd-inhibit` / Windows
+  `SetThreadExecutionState`），**不改系统电源策略、不需要 sudo**；`mode=ac` 让笔记本
+  「接电不睡、拔电照常睡」，`--persist` 写 LaunchAgent / systemd 单元 / 计划任务。
+  `status` 区分 `active`/`pending-ac`/`stale`/`inactive`/`unsupported`，不谎报。
+- **Windows 中文输出编码修复**：启动时把控制台代码页切到 UTF-8(65001) 并开启 ANSI 转义，
+  退出时还原；输出被管道/重定向且启动代码页非 UTF-8 时，人类可读输出转成系统 ANSI
+  代码页（PowerShell 5.1 / cmd 按 OEM 解码管道，此前中文全为乱码）。`--json` 恒为 UTF-8，
+  `EASYWORK_OUTPUT_ENCODING=utf8|oem` 可显式覆盖；`ew doctor` 新增 `console` 诊断项（显示 `cp=`）。
+  Windows 真机验证（11 24H2 / PS 5.1 / SSH）：`.ps1` + `-File` 执行、`CREATE_NO_WINDOW`
+  且脱离 SSH 的 Job 对象、`tasklist` 判定存活、参数变更自动重启后端。
+  新增 owned-file 写盘原语（`engine.ApplyOwnedFile`）。规格见 `docs/spec/08-keepawake.md`（C11）
+
+## [0.2.x] — 跨平台引擎（Go）
 
 将引擎从 Bash 迁移到 Go，实现「一套代码 + 原生 Windows + 跨平台二进制发布」，
-同时保留 Bash 实现作为迁移期等价性 oracle。详见 `DESIGN.md §12` 与 `docs/spec/`。
+同时保留 Bash 实现作为迁移期等价性 oracle（0.2.0 / 0.2.1）。详见 `DESIGN.md §12` 与 `docs/spec/`。
 
 ### 新增
 

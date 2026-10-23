@@ -690,3 +690,65 @@ tools=claude            # 实际装成（已存在或安装成功）
 
 > 不装 GUI 应用；**终端模拟器除外**（Ghostty 为允许项）。
 
+
+---
+
+## 14. 设备防休眠 `keepawake`（v0.3，已实现；规格见 `docs/spec/08-keepawake.md`）
+
+**动机**：`ew install`、依赖下载、远程编译、常驻服务这类长跑任务不该被睡眠打断；
+但"防休眠"在笔记本上极易做错（把电池耗光、或以为合盖也能跑）。
+
+### 14.1 决策
+
+| 决策 | 结论 | 理由 |
+|---|---|---|
+| 是否改系统电源策略 | **不改**（不用 `pmset`/`powercfg`） | 需 sudo、系统升级可能被重置、笔记本语义错 |
+| macOS 参数 | 默认 `caffeinate -s` | `-s` 仅在接电时被 `powerd` 采纳：拔电自动失效、复电自动恢复 |
+| `-i`/`-d` 何时用 | 仅 `mode=always` / `display=true` | 笔记本上 `-i` 会持续耗电；`-m`/`-u` 无价值，不采用 |
+| 默认 | `enabled=false`、`mode=ac` | 遵循「人机体验三原则」：不做惊吓式默认 |
+| 模块形态 | 可选模块（`Optional()=true`），`Priority=75` | 默认 `ew install` 不装；显式指名才装 |
+
+### 14.2 配置与命令
+
+```toml
+[keepawake]
+enabled = "false"   # ew keepawake on 会写 true
+mode    = "ac"      # ac | always（Linux/Windows 无 ac 等价物 → 降级并标记 mode_degraded）
+display = "false"   # 连显示器一起防睡
+persist = "false"   # 写开机自启（LaunchAgent / systemd 用户单元 / 计划任务）
+```
+
+- `ew keepawake on [--always|--ac] [--display] [--persist]`：写配置 + 立即生效（幂等）
+- `ew keepawake off`：写 `enabled=false` + 停断言 + 拆自启（恒成功）
+- `ew keepawake status [--json]`：只读探测，五态 `active|pending-ac|stale|inactive|unsupported`
+- `ew apply keepawake` / `ew install keepawake`：按 config 收敛
+
+### 14.3 跨平台后端
+
+| 平台 | 运行态 | 自启 |
+|---|---|---|
+| macOS | `/usr/bin/caffeinate`（`-s`，可加 `-d`/`-i`） | `~/Library/LaunchAgents/com.easyindie.easywork.keepawake.plist` |
+| Linux | `systemd-inhibit --what=sleep:idle … sleep infinity` | `~/.config/systemd/user/easywork-keepawake.service` |
+| Windows | `keepawake.ps1` + `powershell -File`，每 30 s 续订 `SetThreadExecutionState` | `keepawake.cmd` 启动器 + `schtasks /SC ONLOGON` |
+
+### 14.4 边界（帮助与 `status` 必须如实说明）
+
+- **合盖必睡**（M1/M2 亦然；clamshell 需接电 + 外接屏）——`status` 在 `active` 时固定提示保持开盖；
+- 手动睡眠、电量耗尽、过热保护均不受断言约束；
+- 重启后需 `persist=true` 才恢复；`off` 会同时拆除自启，避免"关不掉"。
+
+### 14.5 写盘原语扩展
+
+plist / systemd unit 是整体文件，无法使用 managed section。新增
+`engine.ApplyOwnedFile` / `engine.RemoveOwnedFile`（整文件接管 + 首次备份 + 卸载还原），
+仅用于 EasyWork 专属路径；删除前校验文件含 EasyWork 标记，防止误删同名文件。
+
+### 14.6 Windows 实现约束（真机踩坑，已固化进 `docs/spec/08-keepawake.md §7.1`）
+
+- 进程创建用 `CREATE_NO_WINDOW`，**不能用 `DETACHED_PROCESS`**（PowerShell 会立即 exit 0）；
+- 必须带 `CREATE_BREAKAWAY_FROM_JOB`，否则 SSH 断开时子进程被 Job 连带杀掉；
+- 脚本一律落盘 `.ps1` 用 `-File` 执行（内联 `-Command` 的引号会被命令行转义破坏）；
+- 存活判定用 `tasklist`（session 0 下 WMI `CommandLine` 可能为 null）；
+- 生成的脚本/启动器保持纯 ASCII（PowerShell 5.1 按 ANSI 解析无 BOM 文件）；
+- `mode`/`display` 变更必须重启后端，不能当作幂等；
+- EasyWork 自有资产覆盖不产生 `.bak`。

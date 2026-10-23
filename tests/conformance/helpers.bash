@@ -16,6 +16,8 @@ setup() {
     export EASYWORK_HOME="$TEST_HOME/.easywork"
     export EASYWORK_API_URL="http://127.0.0.1:1/" # 永不触网
     export NO_COLOR=1
+    # 断言按 UTF-8 字节比较：禁用 Windows 管道下的 ANSI 代码页转码
+    export EASYWORK_OUTPUT_ENCODING=utf8
     # 防止 piped 自安装写到真实 /usr/local/bin（覆盖 Go 引擎）
     export EASYWORK_BIN_DIR="$TEST_HOME/.local/bin"
     mkdir -p "$EASYWORK_BIN_DIR"

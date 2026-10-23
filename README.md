@@ -65,6 +65,7 @@ ew <命令> [参数] [选项]
 | `version` | 查看版本 |
 | `update` | 升级到最新版本 |
 | `completion` | 安装 / 移除 / 查看 shell 补全 |
+| `keepawake on/off` | 设备防休眠（合盖仍会睡眠；不改系统电源策略） |
 
 | 全局选项 | 说明 |
 |---|---|
@@ -74,6 +75,10 @@ ew <命令> [参数] [选项]
 | `--verbose` `-v` | 详细输出 |
 | `--offline` | 禁止联网（跳过下载） |
 | `--keep-config` / `--remove-config` | 卸载时保留 / 删除配置 |
+
+> **Windows 中文显示**：控制台下直接运行即为 UTF-8 正常显示；管道/重定向时自动转成系统
+> ANSI 代码页（兼容 PowerShell 5.1 / cmd）。需要字节级 UTF-8（CI、脚本解析）时设
+> `EASYWORK_OUTPUT_ENCODING=utf8`；`--json` 输出始终是 UTF-8。
 
 ### 机器可读输出（`--json`）
 

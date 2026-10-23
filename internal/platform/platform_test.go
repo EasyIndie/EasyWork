@@ -66,3 +66,11 @@ func TestAtomicWrite(t *testing.T) {
 		t.Fatalf("overwrite failed: %q", data)
 	}
 }
+
+// EnableUTF8Console 在各平台都必须可用且幂等（Windows 上是真调用，其余为 no-op）。
+func TestEnableUTF8ConsoleIdempotent(t *testing.T) {
+	restore1 := EnableUTF8Console()
+	restore1()
+	restore2 := EnableUTF8Console()
+	restore2()
+}
