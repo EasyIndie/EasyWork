@@ -162,7 +162,7 @@ Windows 上 `--json` 恒为 UTF-8；人类可读输出在被管道/重定向时�
 
 ```bash
 make check        # ShellCheck + shfmt + go test + conformance + 安装链路
-make test         # 黑盒 conformance（tests/conformance，71 用例）
+make test         # 黑盒 conformance（tests/conformance，73 用例）
 make install      # 安装到 PATH
 make site         # 本地预览产品页 http://127.0.0.1:8765/
 make acceptance   # 全量验收（含交叉编译与退役不变量）

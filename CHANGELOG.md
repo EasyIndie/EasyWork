@@ -14,6 +14,18 @@
 - **conformance 的 `sleep-policy` 用例改为注入假 `pmset`**：原先直接断言宿主 `pmset` 输出，
   随 CI 机型漂移而失败；现覆盖「两侧」「仅 AC（台式机）」「矛盾组合」三组确定性用例
 
+### 变更
+
+- **CI 分层 + 单次快速迭代**：新增 `Changed paths` 判定与 `Quick gate`（Ubuntu，~1–2 分钟，
+  含 ShellCheck / `bash -n` / shfmt / `gofmt` / `go vet` / `go test` / conformance）；
+  PR 只跑快车道，重矩阵（macOS ShellCheck、macOS/Windows conformance + Windows 原生冒烟、
+  三平台安装链路 e2e、6 目标交叉编译）仅在 `main` 推送且确有代码改动时运行，
+  纯 docs/site/markdown 提交自动跳过；`workflow_dispatch` 支持 `scope=fast|full`；
+  同分支新推送取消旧运行；重矩阵 `needs: quick`，红灯不再浪费平台机时
+- 新增 `make quick`（本地 < 1 分钟门禁）与 `docs/ITERATION.md`（分层门禁、单次快速迭代、
+  提交/分支/发布规范）；`CONTRIBUTING.md`、`AGENTS.md`、`docs/ACCEPTANCE.md` 同步
+- conformance 用例数 71 → 73
+
 ## [0.4.4] - 2026-10-23
 
 ### 新增
