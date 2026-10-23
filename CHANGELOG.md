@@ -5,12 +5,19 @@
 
 ## [Unreleased]
 
+### 变更
+
+- 产品页精简：只保留「安装 → 三步开始 → 3 条理由 → 防休眠 → 6 条常用命令」，
+  移除模块矩阵、可信性卡片与文档网格（并入页脚一行）；HTML 14.9 KB → 6.6 KB
+- 统一容器宽度（`--container: 940px`）：头部、正文、页脚左右边缘对齐，
+  修正此前 hero 因单独 `max-width` 而比其余区块内缩约 105px 的问题
+
 ### 新增
 
 - **产品页（GitHub Pages）**：`site/` 下的极简静态页（无框架、无外链资源、亮/暗随系统），
   含安装命令一键复制、命令与模块一览、防休眠能力说明与文档入口；
-  `.github/workflows/pages.yml` 直接部署 `site/`，`make site` 可本地预览。
-  另含 http→https 兜底（GitHub 的 “Enforce HTTPS” 未生效前仍能升级子资源与导航）。
+  `.github/workflows/pages.yml` 直接部署 `site/`，`make site` 可本地预览；
+  Pages 已启用 Enforce HTTPS（HTTP → 301）。
 
 ## [0.4.3] - 2026-10-23
 
