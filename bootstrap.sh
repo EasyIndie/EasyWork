@@ -57,6 +57,33 @@ resolve_version() {
     echo "${tag#v}"
 }
 
+# ── 完整性校验（sha256，缺失时跳过） ────────────────────────
+verify_checksum() {
+    local base="$1" asset="$2" file="$3"
+    local sums="$tmp/checksums.txt"
+    if ! curl "${curl_opts[@]}" -o "$sums" "${base}/checksums.txt" 2> /dev/null; then
+        log "警告: 未找到 checksums.txt，跳过完整性校验"
+        return 0
+    fi
+    local want
+    want="$(awk -v a="$asset" '$2 == a { print $1; exit }' "$sums")"
+    if [[ -z "$want" ]]; then
+        log "警告: checksums.txt 中无 ${asset}，跳过完整性校验"
+        return 0
+    fi
+    local got=""
+    if command -v sha256sum > /dev/null 2>&1; then
+        got="$(sha256sum "$file" | awk '{ print $1 }')"
+    elif command -v shasum > /dev/null 2>&1; then
+        got="$(shasum -a 256 "$file" | awk '{ print $1 }')"
+    else
+        log "警告: 无 sha256sum/shasum，跳过完整性校验"
+        return 0
+    fi
+    [[ "$got" == "$want" ]] || die "校验失败: ${asset} 的 sha256 不匹配（期望 ${want}，实际 ${got}）"
+    log "完整性校验通过 (sha256)"
+}
+
 # ── 选择安装目录 ────────────────────────────────────────────
 choose_bin_dir() {
     if [[ -n "$BIN_DIR" ]]; then
@@ -102,6 +129,7 @@ main() {
     if ! curl "${curl_opts[@]}" -o "$tmp/archive" "$url"; then
         die "下载失败，请检查网络或版本号"
     fi
+    verify_checksum "${DOWNLOAD_BASE}/${version}" "${asset}$([[ "$os" == "windows" ]] && echo .zip || echo .tar.gz)" "$tmp/archive"
 
     if [[ "$os" == "windows" ]]; then
         if command -v unzip > /dev/null 2>&1; then

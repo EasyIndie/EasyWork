@@ -1,4 +1,4 @@
-.PHONY: lint test fmt fmt-check check check-all install clean help dry-run conform-bash conform build gotest acceptance update-e2e retire-check
+.PHONY: lint test fmt fmt-check check check-all install clean help dry-run conform-bash conform build gotest acceptance update-e2e bootstrap-e2e install-e2e retire-check
 
 # ── EasyWork Makefile ──────────────────────────────────────────
 
@@ -53,7 +53,7 @@ build: ## Build the Go binary into .build/ew
 gotest: ## Run Go unit tests
 	go test ./...
 
-check-all: lint fmt-check test gotest conform-bash ## Full check: shell + Go + conformance
+check-all: lint fmt-check test gotest conform-bash install-e2e ## Full check: shell + Go + conformance + 安装链路
 	@echo "✅ All checks passed (with Go conformance)"
 
 acceptance: ## Run the full migration acceptance suite (M0–M7)
@@ -61,6 +61,11 @@ acceptance: ## Run the full migration acceptance suite (M0–M7)
 
 update-e2e: ## End-to-end self-upgrade test via a local mirror
 	bash scripts/update-e2e.sh
+
+bootstrap-e2e: ## End-to-end install test for bootstrap.sh (local mirror, no network)
+	bash scripts/bootstrap-e2e.sh
+
+install-e2e: bootstrap-e2e update-e2e ## Install/upgrade chain e2e (bootstrap + update)
 
 retire-check: ## Check preconditions for retiring the Bash engine
 	bash scripts/retire-check.sh

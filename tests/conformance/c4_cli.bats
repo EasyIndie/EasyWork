@@ -75,3 +75,13 @@ load helpers
     ew_capture definitely-not-a-command
     [ "$EW_RC" -eq 1 ]
 }
+
+# 退役前从 Bash e2e 迁入：ew init = shell + git，零交互，不装 vim。
+@test "C4-init-installs-shell-and-git" {
+    ew_capture init --offline
+    [ "$EW_RC" -eq 0 ]
+    grep -q '^\[shell\]' "$EASYWORK_HOME/manifest"
+    grep -q '^\[git\]' "$EASYWORK_HOME/manifest"
+    ! grep -q '^\[vim\]' "$EASYWORK_HOME/manifest"
+    [ ! -e "$HOME/.vimrc" ]
+}

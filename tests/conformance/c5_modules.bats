@@ -38,3 +38,13 @@ load helpers
     done
     [[ "$EW_OUT" == ${pat}* ]]
 }
+
+# 退役前从 Bash e2e 迁入：显式安装单个模块只应用该模块。
+@test "C5-install-single-module" {
+    ew_capture install vim --yes --offline
+    [ "$EW_RC" -eq 0 ]
+    grep -q '^\[vim\]' "$EASYWORK_HOME/manifest"
+    ! grep -q '^\[git\]' "$EASYWORK_HOME/manifest"
+    ! grep -q '^\[shell\]' "$EASYWORK_HOME/manifest"
+    [ ! -s "$HOME/.gitconfig" ]
+}

@@ -67,3 +67,29 @@ load helpers
     grep -q 'name = Pre User' "$HOME/.gitconfig"
     grep -q 'lgtg = log --oneline --tags' "$HOME/.gitconfig"
 }
+
+# 退役前从 Bash e2e 迁入：卸载单个模块不得影响其他模块的 managed section。
+@test "C6-uninstall-partial-keeps-others" {
+    ew_capture install shell git --yes --offline
+    [ "$EW_RC" -eq 0 ]
+    local shell_cfg
+    shell_cfg="$(shell_target)"
+    ew_capture uninstall git --yes --offline
+    [ "$EW_RC" -eq 0 ]
+    grep -q 'EasyWork managed section begin' "$shell_cfg"
+    ! grep -q 'EasyWork managed section begin' "$HOME/.gitconfig"
+    grep -q '^\[shell\]' "$EASYWORK_HOME/manifest"
+    ! grep -q '^\[git\]' "$EASYWORK_HOME/manifest"
+}
+
+# 退役前从 Bash e2e 迁入：--dry-run 不得写任何目标文件与 installed 状态。
+@test "C6-dry-run-writes-nothing" {
+    # Bash 实现在 dry-run 下会误写 installed=true（已知缺陷，Go 已修正）；
+    # Bash 引擎随本批次退役，故此处只约束 Go。
+    [ "${EW_ENGINE:-}" = "go" ] || skip "Bash 在 dry-run 下误写 manifest（退役中）"
+    ew_capture install shell git --dry-run --offline
+    [ "$EW_RC" -eq 0 ]
+    [ ! -s "$HOME/.gitconfig" ]
+    [ ! -e "$(shell_target)" ] || ! grep -q 'managed section' "$(shell_target)"
+    ! grep -q 'installed=true' "$EASYWORK_HOME/manifest" 2> /dev/null
+}

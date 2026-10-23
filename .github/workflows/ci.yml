@@ -101,6 +101,34 @@ jobs:
         shell: bash
         run: shfmt -d -i 4 -bn -ci -sr .
 
+  install-e2e:
+    name: Install chain e2e (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      # bootstrap.sh 是退役后 Unix 唯一安装入口，必须有自动化门禁；
+      # 两条链路都只访问 127.0.0.1 的本地镜像，不触网。
+      - name: bootstrap.sh 端到端（本地镜像 + sha256 + 篡改拦截）
+        shell: bash
+        run: bash scripts/bootstrap-e2e.sh
+
+      - name: update 自升级端到端（本地镜像）
+        shell: bash
+        run: bash scripts/update-e2e.sh
+
   go-engine:
     name: Go engine (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
