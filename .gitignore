@@ -10,8 +10,7 @@
 
 # EasyWork local files (do not commit)
 easywork.conf
-.easywork/config
-.easywork/manifest
+.easywork/
 *.tmp
 *.bak
 
