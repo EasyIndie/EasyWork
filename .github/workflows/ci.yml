@@ -87,13 +87,20 @@ jobs:
         shell: bash
         run: bash scripts/bootstrap-e2e.sh
 
-      # 注意：本步骤的内联脚本必须保持纯 ASCII（Windows PowerShell 5.1 按 ANSI 解析无 BOM 脚本）
-      - name: bootstrap.ps1 end-to-end (Windows, local mirror)
+      # 注意：这些步骤的内联脚本必须保持纯 ASCII（Windows PowerShell 5.1 按 ANSI 解析无 BOM 脚本）
+      - name: bootstrap.ps1 e2e - Windows PowerShell 5.1
         if: runner.os == 'Windows'
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1 -ChildShell powershell
+
+      - name: bootstrap.ps1 e2e - PowerShell 7
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pwsh -NoProfile -File scripts/bootstrap-e2e.ps1 -ChildShell pwsh
 
       - name: update 自升级端到端（Unix：本地镜像）
         if: runner.os != 'Windows'

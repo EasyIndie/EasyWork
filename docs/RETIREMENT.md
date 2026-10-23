@@ -21,6 +21,7 @@
    同时给 `bootstrap.sh` 增加了 sha256 校验（此前只下载不校验）。
 2. **`scripts/update-e2e.sh` 接入 CI**（新增 `install-e2e` job），并让 `make check` 覆盖安装/升级链路。
    同一 job 的 Windows 矩阵跑 `scripts/bootstrap-e2e.ps1`（`bootstrap.ps1` 亦补上 sha256 校验），
+   并在 **Windows PowerShell 5.1 与 PowerShell 7** 两个宿主下各跑一次（含 `irm | iex` 用法），
    使两平台安装入口都有自动化门禁。
 
 另外把 Bash 白盒测试里未被 conformance 覆盖的 4 条行为断言迁入规格测试：

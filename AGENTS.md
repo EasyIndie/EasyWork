@@ -101,6 +101,8 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 - CI：`shell-lint`（shellcheck+shfmt）、`install-e2e`（三平台：Unix 跑 `bootstrap-e2e.sh`，
   Windows 跑 `bootstrap-e2e.ps1`）、`go-engine`（三平台 go test + conformance + Windows smoke）、
   `cross-compile`（6 目标）
+- Windows 安装链路在 CI 上跑**两个宿主**：Windows PowerShell 5.1 与 PowerShell 7
+  （`-ChildShell powershell|pwsh`），并额外覆盖文档里的 `irm | iex` 用法
 - `scripts/bootstrap-e2e.ps1` 必须保持**纯 ASCII**：Windows PowerShell 5.1 会按 ANSI
   解析无 BOM 脚本，非 ASCII 文本可能破坏语法（CI 有专门断言）
 

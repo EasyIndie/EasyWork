@@ -22,10 +22,14 @@ Usage (Windows):
 Parameters:
   -Exe              prebuilt ew.exe (omit to run "go build" from the repo root)
   -BootstrapScript  path to bootstrap.ps1 (default: next to this script / repo root)
+  -ChildShell       interpreter used to RUN bootstrap.ps1: powershell (5.1) or pwsh (7+).
+                    Default powershell. CI runs this script twice to cover both hosts.
 #>
 param(
     [string]$Exe = '',
-    [string]$BootstrapScript = ''
+    [string]$BootstrapScript = '',
+    [ValidateSet('powershell', 'pwsh')]
+    [string]$ChildShell = 'powershell'
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -56,6 +60,13 @@ New-Item -ItemType Directory -Force -Path $Work | Out-Null
 $Job = $null
 
 function Ok($m) { Write-Host "  OK $m" }
+function ShellVersion($exe) {
+    try {
+        $v = & $exe -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>$null
+        if ($LASTEXITCODE -ne 0) { return '' }
+        return ($v | Select-Object -Last 1)
+    } catch { return '' }
+}
 function Fail($m) { Write-Host "  FAIL $m" -ForegroundColor Red; exit 1 }
 
 function New-Mirror($Dir) {
@@ -117,7 +128,7 @@ function Invoke-Bootstrap($Base, $BinDir, [switch]$Latest) {
     # Use Start-Process with redirection: child stderr would otherwise raise NativeCommandError
     $outFile = Join-Path $Work 'bootstrap.out'
     $errFile = Join-Path $Work 'bootstrap.err'
-    $proc = Start-Process -FilePath 'powershell' -NoNewWindow -Wait -PassThru `
+    $proc = Start-Process -FilePath $ChildShell -NoNewWindow -Wait -PassThru `
         -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $bootCopy) `
         -RedirectStandardOutput $outFile -RedirectStandardError $errFile
     $text = ''
@@ -134,6 +145,9 @@ function Get-InstalledVersion($BinDir) {
     if ($json -match '"version":"([^"]+)"') { return $Matches[1] }
     return ''
 }
+
+Write-Host "== host: $($PSVersionTable.PSEdition) $($PSVersionTable.PSVersion); child shell: $ChildShell $(ShellVersion $ChildShell) =="
+if (-not (ShellVersion $ChildShell)) { Fail "child shell not available: $ChildShell" }
 
 try {
     Write-Host "== prepare binary $Ver =="
@@ -190,7 +204,36 @@ try {
     Remove-Job $Job2 -Force -ErrorAction SilentlyContinue
     Ok 'tampered archive rejected, installed binary untouched'
 
-    Write-Host 'bootstrap.ps1 e2e passed (pinned / latest / tamper)'
+    Write-Host '== 4. iex path (docs use "irm ... | iex") =='
+    $binDir2 = Join-Path $Work 'bin-iex'
+    New-Item -ItemType Directory -Force -Path $binDir2 | Out-Null
+    # Re-serve the good mirror
+    $port3 = Free-Port
+    $Job3 = Start-MirrorServer $mirror $port3
+    Start-Sleep -Milliseconds 800
+    $env:EASYWORK_BIN_DIR = $binDir2
+    $env:EASYWORK_DOWNLOAD_BASE = "http://127.0.0.1:$port3"
+    $env:EASYWORK_VERSION = $Ver
+    $env:EASYWORK_SKIP_PATH = '1'
+    $env:EASYWORK_E2E_BOOT = $BootstrapScript
+    $outFile = Join-Path $Work 'iex.out'
+    $errFile = Join-Path $Work 'iex.err'
+    $proc = Start-Process -FilePath $ChildShell -NoNewWindow -Wait -PassThru `
+        -ArgumentList @('-NoProfile', '-Command', 'Invoke-Expression (Get-Content -Raw -Encoding UTF8 $env:EASYWORK_E2E_BOOT)') `
+        -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    $text = ''
+    foreach ($f in @($outFile, $errFile)) { if (Test-Path $f) { $text += (Get-Content -Raw -Encoding UTF8 $f) } }
+    if ($proc.ExitCode -ne 0) { Write-Host $text; Fail 'bootstrap via iex failed' }
+    if ((Get-InstalledVersion $binDir2) -ne $Ver) { Fail 'version mismatch (iex)' }
+    Stop-Job $Job3 -ErrorAction SilentlyContinue
+    Remove-Job $Job3 -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:\EASYWORK_E2E_BOOT -ErrorAction SilentlyContinue
+    Ok 'iex install path works'
+
+    Stop-Job $Job2 -ErrorAction SilentlyContinue
+    Remove-Job $Job2 -Force -ErrorAction SilentlyContinue
+
+    Write-Host 'bootstrap.ps1 e2e passed (pinned / latest / tamper / iex)'
 } finally {
     if ($Job) {
         Stop-Job $Job -ErrorAction SilentlyContinue

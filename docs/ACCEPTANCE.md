@@ -23,7 +23,7 @@ scripts/acceptance.sh      # 或 make acceptance
 | 交叉编译 | 6 目标 `{darwin,linux,windows}×{amd64,arm64}` 全部构建成功 | M5 |
 | Go 端到端 | 沙箱内 `status → keepawake status → install git shell → 标记存在 → uninstall → 标记消失` | M3/M6 |
 | 退役不变量 | `make retire-check`：无 Bash 残留、bootstrap 带校验、发布链路只针对 Go | 退役后 |
-| 安装链路 | `bootstrap-e2e`（Unix）/ `bootstrap-e2e.ps1`（Windows）+ `update-e2e`，本地镜像不触网 | M5/M6 |
+| 安装链路 | `bootstrap-e2e`（Unix）/ `bootstrap-e2e.ps1`（Windows，PS 5.1 与 7 双宿主，含 `irm \| iex`）+ `update-e2e`，本地镜像不触网 | M5/M6 |
 
 退出码 `0` 表示无 FAIL（工具缺失记为 SKIP，不算失败）。
 
@@ -92,8 +92,9 @@ tar -xzf "easywork_${VERSION}_$(uname -s | tr 'A-Z' 'a-z')_$(uname -m | sed 's/x
 ```bash
 bash -n bootstrap.sh
 shellcheck bootstrap.sh
-# Windows（本机可复现，不触网）：
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1
+# Windows（本机可复现，不触网）：PS 5.1 与 PowerShell 7 各跑一次
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1 -ChildShell powershell
+pwsh -NoProfile -File scripts/bootstrap-e2e.ps1 -ChildShell pwsh
 # Windows 原生引导（真机/CI）：PowerShell 5.1 与 7 均可
 #   $env:EASYWORK_VERSION='0.2.0'; $env:EASYWORK_DOWNLOAD_BASE='<mirror>'
 #   Invoke-Expression (Get-Content -Raw bootstrap.ps1)   # 等价于 irm ... | iex
@@ -171,7 +172,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1
 | 任务 | 位置 | 覆盖 |
 |---|---|---|
 | `shell-lint` | `.github/workflows/ci.yml` | ShellCheck + `bash -n` + shfmt（`bootstrap.sh` + `scripts/`，Ubuntu/macOS） |
-| `install-e2e` | 同上 | 三平台：`bootstrap-e2e.sh` / `bootstrap-e2e.ps1`（含 sha256 篡改拦截）+ `update-e2e`，本地镜像不触网 |
+| `install-e2e` | 同上 | 三平台：`bootstrap-e2e.sh` / `bootstrap-e2e.ps1`（含 sha256 篡改拦截；Windows 分别用 PS 5.1 与 pwsh 7 各跑一次）+ `update-e2e`，本地镜像不触网 |
 | `go-engine` | 同上 | Go 单测 + `gofmt`/`go vet` + conformance（三平台）+ Windows 原生冒烟 |
 | `cross-compile` | 同上 | 6 目标（darwin/linux/windows × amd64/arm64）交叉编译（PR/push） |
 | `release` / `binaries` / `checksums` | `release.yml` | 6 目标二进制 + checksums + attestation（Bash 资产随 0.3.0 发布后于 0.4.0 移除） |

@@ -23,7 +23,8 @@
 - `bootstrap.sh` / `bootstrap.ps1` 新增 sha256 完整性校验（缺失 checksums 时告警跳过）
 - `make check` 收敛为 `lint + fmt-check + gotest + conformance + install-e2e`；
   新增 `make install-e2e`（`bootstrap-e2e` + `update-e2e`，本地镜像不触网）
-- CI：新增 Windows 安装链路端到端（`bootstrap.ps1`），`install-e2e` 覆盖三平台
+- CI：新增 Windows 安装链路端到端（`bootstrap.ps1`），`install-e2e` 覆盖三平台；
+  Windows 在 **PowerShell 5.1 与 PowerShell 7** 两个宿主下各跑一次（含 `irm | iex` 用法）
 
 ## [0.3.0] - 2026-10-23
 

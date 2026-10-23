@@ -774,7 +774,7 @@ plist / systemd unit 是整体文件，无法使用 managed section。新增
 | 门禁 | 原因 | 落点 |
 |---|---|---|
 | `bootstrap.sh` 端到端 | 退役后它是 Unix 唯一安装入口，此前只有 `bash -n` | `scripts/bootstrap-e2e.sh`（本地镜像：指定版本 / latest 解析 / 篡改拦截） |
-| `bootstrap.ps1` 端到端 | Windows 唯一安装入口，此前只有真机手测 | `scripts/bootstrap-e2e.ps1`（同三条路径，CI 的 `install-e2e` 在 windows-latest 跑） |
+| `bootstrap.ps1` 端到端 | Windows 唯一安装入口，此前只有真机手测 | `scripts/bootstrap-e2e.ps1`（同三条路径 + `irm \| iex`；CI 在 windows-latest 用 PS 5.1 与 pwsh 7 各跑一次） |
 | sha256 完整性校验 | 原 `bootstrap.sh` 只下载不校验 | `verify_checksum()`；缺失 checksums 时告警跳过 |
 | update 自升级进 CI | 退役后升级只剩这条链路 | `install-e2e` job（`make check` 亦覆盖） |
 | 迁入 4 条 e2e 断言 | Bash 白盒测试删除后避免覆盖缺口 | C4-init / C5-single-module / C6-partial-uninstall / C6-dry-run |
