@@ -1,6 +1,6 @@
 # EasyWork v2 设计草案
 
-> **历史文档**：本文记录 v2 设计与 Go 迁移决策。**Bash 引擎已于 0.3.0 退役**
+> **历史文档**：本文记录 v2 设计与 Go 迁移决策。**Bash 引擎已于 0.4.0 退役**
 > （见 §15 与 `docs/RETIREMENT.md`），现行行为以 `docs/spec/` 为准。
 >
 > 状态：**契约已冻结并落地；Go 迁移完成、Bash 已移除（见 §12 / §15）**
@@ -581,7 +581,7 @@ EasyWork（一套代码）
 | **M6** | 分发与向后兼容 | 老用户 `EASYWORK_HOME` 无感迁移 |
 | **M7** | 测试矩阵、验收与回滚 | 三 OS 矩阵 + `-race` + conformance 全绿；回滚演练记录 |
 
-> `legacy` 归档后，`bin/easywork` 不再作为引擎；0.3.0 起已删除，只保留 `bootstrap.sh` / `bootstrap.ps1` 薄引导。
+> `legacy` 归档后，`bin/easywork` 不再作为引擎；0.4.0 起已删除，只保留 `bootstrap.sh` / `bootstrap.ps1` 薄引导。
 
 ### 12.8 实施状态（迁移期）
 
@@ -597,7 +597,7 @@ EasyWork（一套代码）
 | M7 矩阵/验收/回滚 | ✅ | `go-engine` CI 三平台（Windows 含 Go conformance）+ PR `cross-compile` 6 目标；`docs/ROLLBACK.md` |
 
 > 迁移期黑盒 conformance 同时验证 Bash 与 Go（`tests/conformance/run.sh all`）；
-> 0.3.0 起 Bash 退役，门禁收敛为 `tests/conformance/run.sh go`。
+> 0.4.0 起 Bash 退役，门禁收敛为 `tests/conformance/run.sh go`。
 > G1（细粒度子组件）与 C11（设备防休眠）为 Go 独有能力。
 
 ---
@@ -759,7 +759,7 @@ plist / systemd unit 是整体文件，无法使用 managed section。新增
 
 ---
 
-## 15. Bash 引擎退役（0.3.0）
+## 15. Bash 引擎退役（0.4.0）
 
 > 执行记录与前置条件核对见 [`docs/RETIREMENT.md`](docs/RETIREMENT.md)。
 
@@ -774,6 +774,7 @@ plist / systemd unit 是整体文件，无法使用 managed section。新增
 | 门禁 | 原因 | 落点 |
 |---|---|---|
 | `bootstrap.sh` 端到端 | 退役后它是 Unix 唯一安装入口，此前只有 `bash -n` | `scripts/bootstrap-e2e.sh`（本地镜像：指定版本 / latest 解析 / 篡改拦截） |
+| `bootstrap.ps1` 端到端 | Windows 唯一安装入口，此前只有真机手测 | `scripts/bootstrap-e2e.ps1`（同三条路径，CI 的 `install-e2e` 在 windows-latest 跑） |
 | sha256 完整性校验 | 原 `bootstrap.sh` 只下载不校验 | `verify_checksum()`；缺失 checksums 时告警跳过 |
 | update 自升级进 CI | 退役后升级只剩这条链路 | `install-e2e` job（`make check` 亦覆盖） |
 | 迁入 4 条 e2e 断言 | Bash 白盒测试删除后避免覆盖缺口 | C4-init / C5-single-module / C6-partial-uninstall / C6-dry-run |

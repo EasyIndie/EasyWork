@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # EasyWork — Bash 引擎退役不变量检查
 #
-# Bash 引擎已于 0.3.0 退役（存档 tag `legacy-bash-0.3.0`）。
+# Bash 引擎已于 0.4.0 退役（存档 tag `legacy-bash-0.3.0`）。
 # 本脚本断言「退役后的仓库结构」没有回退：Bash 引擎文件不得复活、
 # 唯一安装入口是 bootstrap.sh、conformance/release 只针对 Go。
 #

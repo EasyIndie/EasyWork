@@ -45,7 +45,7 @@ jobs:
       - name: Install ShellCheck
         run: sudo apt-get update -y && sudo apt-get install -y shellcheck
 
-      # Bash 引擎已于 0.3.0 退役；仓库内仅剩引导/辅助脚本需要静态检查。
+      # Bash 引擎已于 0.4.0 退役；仓库内仅剩引导/辅助脚本需要静态检查。
       - name: ShellCheck（bootstrap + scripts）
         run: shellcheck bootstrap.sh scripts/*.sh
 

@@ -2,7 +2,7 @@
 # EasyWork — Go 引擎黑盒 conformance 运行器
 #
 # 用法: tests/conformance/run.sh [go]
-#   只测 Go 二进制（Bash 引擎已于 0.3.0 退役，存档 tag legacy-bash-0.3.0）。
+#   只测 Go 二进制（Bash 引擎已于 0.4.0 退役，存档 tag legacy-bash-0.3.0）。
 #   保留参数以兼容旧脚本；非 go 的参数会给出提示后仍只跑 Go。
 set -uo pipefail
 

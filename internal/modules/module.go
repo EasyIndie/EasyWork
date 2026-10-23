@@ -135,7 +135,7 @@ func allPlatforms() []platform.OS {
 }
 
 // registry 的顺序即 `list --json` 的输出顺序（契约五）：新增模块请按名字字母序插入。
-// 该顺序源自 Bash 时代 `_discover_modules` 扫描 lib/*.sh 的字母序（Bash 已于 0.3.0 退役）。
+// 该顺序源自 Bash 时代 `_discover_modules` 扫描 lib/*.sh 的字母序（Bash 已于 0.4.0 退役）。
 var registry = []Module{
 	aiModule{},        // ai（别名 ai-tools）
 	ghModule{},        // gh

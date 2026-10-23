@@ -10,6 +10,7 @@ EasyWork — Windows 原生引导脚本（PowerShell 一行安装）
   EASYWORK_BIN_DIR       安装目录（默认 %USERPROFILE%\.local\bin）
   EASYWORK_DOWNLOAD_BASE 资产基址（默认 GitHub releases/download；可指向镜像）
   EASYWORK_API_BASE      API 基址（默认 https://api.github.com）
+  EASYWORK_SKIP_PATH     置 1 时不修改用户 PATH/PATHEXT（CI/便携安装用）
 #>
 $ErrorActionPreference = 'Stop'
 
@@ -60,8 +61,32 @@ Log "下载: $url"
 
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("ew-" + [System.Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+$archive = Join-Path $tmp 'archive.zip'
 try {
-    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile (Join-Path $tmp 'archive.zip')
+    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $archive
+
+    # ── 完整性校验（sha256；checksums.txt 缺失时告警跳过）────────
+    $sumsUrl = "$DownloadBase/$Version/checksums.txt"
+    try {
+        $sumsFile = Join-Path $tmp 'checksums.txt'
+        Invoke-WebRequest -UseBasicParsing -Uri $sumsUrl -OutFile $sumsFile
+        $want = $null
+        foreach ($line in Get-Content $sumsFile) {
+            $parts = $line -split '\s+', 2
+            if ($parts.Count -eq 2 -and $parts[1].Trim() -eq $asset) { $want = $parts[0].Trim().ToLower(); break }
+        }
+        if (-not $want) {
+            Log "警告: checksums.txt 中无 $asset，跳过完整性校验"
+        } else {
+            $got = (Get-FileHash -Algorithm SHA256 -Path $archive).Hash.ToLower()
+            if ($got -ne $want) { Die "校验失败 (checksum mismatch): $asset sha256 不匹配（期望 $want，实际 $got）" }
+            Log '完整性校验通过 (sha256)'
+        }
+    } catch {
+        if ($_.Exception.Message -like '*checksum mismatch*') { throw }
+        Log '警告: 未找到 checksums.txt，跳过完整性校验'
+    }
+
     Expand-Archive -Path (Join-Path $tmp 'archive.zip') -DestinationPath $tmp -Force
     $exe = Join-Path $tmp 'ew.exe'
     if (-not (Test-Path $exe)) { Die '压缩包中未找到 ew.exe' }
@@ -71,7 +96,12 @@ try {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
 
-# ── PATH / PATHEXT（仅对新会话生效）─────────────────────────
+# ── PATH / PATHEXT（仅对新会话生效；EASYWORK_SKIP_PATH=1 时跳过）──
+if ($env:EASYWORK_SKIP_PATH -eq '1') {
+    Log "已安装: $BinDir\ew.exe, $BinDir\easywork.exe（已跳过 PATH 修改）"
+    Log '下一步: ew install --yes'
+    return
+}
 $p = [Environment]::GetEnvironmentVariable('Path', 'User')
 if (-not $p) { $p = '' }
 if (($p -split ';') -notcontains $BinDir) {

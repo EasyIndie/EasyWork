@@ -7,7 +7,7 @@
 
 **EasyWork**：Go 静态单二进制的开发环境一键配置 CLI（macOS / Linux / Windows），
 终端用户零运行时依赖，`curl | bash`（Unix）或 `irm | iex`（Windows）即可用。
-**Bash 引擎已于 0.3.0 退役**（存档 tag `legacy-bash-0.3.0`），现只有一套实现。
+**Bash 引擎已于 0.4.0 退役**（存档 tag `legacy-bash-0.3.0`），现只有一套实现。
 
 ## 2. 技术约束（硬性，违反即不合格）
 
@@ -31,7 +31,7 @@ make lint         # ShellCheck（bootstrap.sh + scripts/）
 make fmt          # shfmt -w
 make build        # 构建到 .build/ew
 make install      # 安装（Unix: /usr/local/bin 或 ~/.local/bin；Windows: %USERPROFILE%\.local\bin）
-make install-e2e  # bootstrap + update 本地镜像端到端（不触网）
+make install-e2e  # bootstrap + update 本地镜像端到端（不触网；Windows 用 scripts/bootstrap-e2e.ps1）
 make acceptance   # 一键验收（静态检查/单测/conformance/交叉编译/安装链路/退役不变量）
 make retire-check # 断言 Bash 引擎没有复活
 ```
@@ -68,7 +68,7 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 - **并发锁**：`platform.AcquireLock`（`O_CREATE|O_EXCL` + 陈旧回收）
 - **安装编排**：`priority` 升序；可选模块仅显式指名才装；失败不阻塞后续模块并写 `failed`
 
-## 6. 当前状态（0.3.0）
+## 6. 当前状态（0.4.0）
 
 - ✅ 5 个契约 + managed section 协议 + 跨平台行为（`docs/spec/`）
 - ✅ CLI/JSON 信封、`--json` 分流、退出码封闭集合
@@ -98,8 +98,11 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 - 不发起真实网络：本地镜像端口由 `scripts/{bootstrap,update}-e2e.sh` 提供（127.0.0.1）
 - Go 单测：纯函数与可注入依赖（`Runner`/`Clock` 等），不得改动宿主真实状态
   （如 keepawake 测试注入 fake runner，不真的起 caffeinate/launchctl）
-- CI：`shell-lint`（shellcheck+shfmt）、`install-e2e`、`go-engine`（三平台 go test +
-  conformance + Windows smoke）、`cross-compile`（6 目标）
+- CI：`shell-lint`（shellcheck+shfmt）、`install-e2e`（三平台：Unix 跑 `bootstrap-e2e.sh`，
+  Windows 跑 `bootstrap-e2e.ps1`）、`go-engine`（三平台 go test + conformance + Windows smoke）、
+  `cross-compile`（6 目标）
+- `scripts/bootstrap-e2e.ps1` 必须保持**纯 ASCII**：Windows PowerShell 5.1 会按 ANSI
+  解析无 BOM 脚本，非 ASCII 文本可能破坏语法（CI 有专门断言）
 
 ## 9. 一句话风格要求
 

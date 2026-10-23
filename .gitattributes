@@ -1,3 +1,4 @@
 # 统一行尾为 LF：避免 Windows 检出 CRLF 导致 gofmt/shfmt 误报
 # （Go / Shell / Markdown 等文本文件在各平台均以 LF 检出与提交）
 * text=auto eol=lf
+*.ps1 text eol=lf

@@ -1,6 +1,6 @@
 # 验收指南
 
-> 适用于 **Go 单引擎**（Bash 引擎已于 0.3.0 退役，见 [RETIREMENT.md](RETIREMENT.md)）。
+> 适用于 **Go 单引擎**（Bash 引擎已于 0.4.0 退役，见 [RETIREMENT.md](RETIREMENT.md)）。
 > 验收 = 逐项满足下方判据，可自动化部分由 `scripts/acceptance.sh` 一键执行。
 > 下方 M0–M7 保留为迁移期历史判据。
 
@@ -23,7 +23,7 @@ scripts/acceptance.sh      # 或 make acceptance
 | 交叉编译 | 6 目标 `{darwin,linux,windows}×{amd64,arm64}` 全部构建成功 | M5 |
 | Go 端到端 | 沙箱内 `status → keepawake status → install git shell → 标记存在 → uninstall → 标记消失` | M3/M6 |
 | 退役不变量 | `make retire-check`：无 Bash 残留、bootstrap 带校验、发布链路只针对 Go | 退役后 |
-| 安装链路 | `bootstrap-e2e` + `update-e2e`（本地镜像，不触网） | M5/M6 |
+| 安装链路 | `bootstrap-e2e`（Unix）/ `bootstrap-e2e.ps1`（Windows）+ `update-e2e`，本地镜像不触网 | M5/M6 |
 
 退出码 `0` 表示无 FAIL（工具缺失记为 SKIP，不算失败）。
 
@@ -92,11 +92,13 @@ tar -xzf "easywork_${VERSION}_$(uname -s | tr 'A-Z' 'a-z')_$(uname -m | sed 's/x
 ```bash
 bash -n bootstrap.sh
 shellcheck bootstrap.sh
+# Windows（本机可复现，不触网）：
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1
 # Windows 原生引导（真机/CI）：PowerShell 5.1 与 7 均可
 #   $env:EASYWORK_VERSION='0.2.0'; $env:EASYWORK_DOWNLOAD_BASE='<mirror>'
 #   Invoke-Expression (Get-Content -Raw bootstrap.ps1)   # 等价于 irm ... | iex
 # 老用户数据无感：EASYWORK_HOME/config.toml/manifest 格式自 0.1.0 起不变
-# Bash 引擎用户迁移：Bash 已于 0.3.0 退役，改用 bootstrap 一行命令安装 Go 二进制即可
+# Bash 引擎用户迁移：Bash 已于 0.4.0 退役，改用 bootstrap 一行命令安装 Go 二进制即可
 ```
 
 ### M7 矩阵 / 回滚
@@ -169,10 +171,10 @@ shellcheck bootstrap.sh
 | 任务 | 位置 | 覆盖 |
 |---|---|---|
 | `shell-lint` | `.github/workflows/ci.yml` | ShellCheck + `bash -n` + shfmt（`bootstrap.sh` + `scripts/`，Ubuntu/macOS） |
-| `install-e2e` | 同上 | `bootstrap-e2e`（含 sha256 篡改拦截）+ `update-e2e`，本地镜像不触网 |
+| `install-e2e` | 同上 | 三平台：`bootstrap-e2e.sh` / `bootstrap-e2e.ps1`（含 sha256 篡改拦截）+ `update-e2e`，本地镜像不触网 |
 | `go-engine` | 同上 | Go 单测 + `gofmt`/`go vet` + conformance（三平台）+ Windows 原生冒烟 |
 | `cross-compile` | 同上 | 6 目标（darwin/linux/windows × amd64/arm64）交叉编译（PR/push） |
-| `release` / `binaries` / `checksums` | `release.yml` | 6 目标二进制 + checksums + attestation（Bash 资产已于 0.3.0 移除） |
+| `release` / `binaries` / `checksums` | `release.yml` | 6 目标二进制 + checksums + attestation（Bash 资产随 0.3.0 发布后于 0.4.0 移除） |
 
 ---
 
@@ -181,5 +183,5 @@ shellcheck bootstrap.sh
 | 编号 | 结论 | 依据 |
 |---|---|---|
 | #11 Windows 程度 | WSL2/Git Bash 保底；**原生 PowerShell + winget 为终态** | DESIGN §12.1；`shell` 模块 Windows 分支 |
-| #12 双实现成本 | 迁移期**接受**（Bash 冻结为 oracle，≤2 release）；**已于 0.3.0 退役** | `docs/RETIREMENT.md`；conformance 收敛为 Go |
+| #12 双实现成本 | 迁移期**接受**（Bash 冻结为 oracle，≤2 release）；**已于 0.4.0 退役** | `docs/RETIREMENT.md`；conformance 收敛为 Go |
 | #13 签名/公证 | 第一版仅 sha256 checksums + provenance attestation；付费签名推迟到 1.0 后 | `release.yml` checksums 任务 |

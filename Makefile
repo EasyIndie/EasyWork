@@ -2,7 +2,7 @@
 
 # ── EasyWork Makefile ──────────────────────────────────────────
 #
-# 引擎：Go（`cmd/ew` + `internal/*`），Bash 引擎已于 0.3.0 退役
+# 引擎：Go（`cmd/ew` + `internal/*`），Bash 引擎已于 0.4.0 退役
 # （存档 tag: legacy-bash-0.3.0）。仓库内剩余的 shell 脚本只有
 # 引导/安装/验收/CI 辅助，仍受 ShellCheck + shfmt 约束。
 

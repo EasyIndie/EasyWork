@@ -7,6 +7,24 @@
 
 （暂无）
 
+## [0.4.0] - 2026-10-23
+
+引擎收敛为 Go 单实现（0.3.0 为最后一个双引擎版本，Bash 资产随该版本发布）。
+
+### 移除
+
+- **Bash 引擎退役**（存档 tag `legacy-bash-0.3.0`）：删除 `bin/easywork`、`lib/*.sh`、
+  `MODULES`、`easywork.conf.example` 与 Bash 白盒测试（192 用例）。`bootstrap.sh` /
+  `bootstrap.ps1` 成为唯一安装入口；conformance、CI、release 收敛为只针对 Go。
+  `make retire-check` 守护不变量，详见 `docs/RETIREMENT.md`。
+
+### 变更
+
+- `bootstrap.sh` / `bootstrap.ps1` 新增 sha256 完整性校验（缺失 checksums 时告警跳过）
+- `make check` 收敛为 `lint + fmt-check + gotest + conformance + install-e2e`；
+  新增 `make install-e2e`（`bootstrap-e2e` + `update-e2e`，本地镜像不触网）
+- CI：新增 Windows 安装链路端到端（`bootstrap.ps1`），`install-e2e` 覆盖三平台
+
 ## [0.3.0] - 2026-10-23
 
 ### 新增
@@ -23,18 +41,6 @@
   Windows 真机验证（11 24H2 / PS 5.1 / SSH）：`.ps1` + `-File` 执行、`CREATE_NO_WINDOW`
   且脱离 SSH 的 Job 对象、`tasklist` 判定存活、参数变更自动重启后端。
   新增 owned-file 写盘原语（`engine.ApplyOwnedFile`）。规格见 `docs/spec/08-keepawake.md`（C11）
-
-### 移除
-
-- **Bash 引擎退役**（存档 tag `legacy-bash-0.3.0`）：删除 `bin/easywork`、`lib/*.sh`、
-  `MODULES`、`easywork.conf.example` 与 Bash 白盒测试（192 用例）。`bootstrap.sh` /
-  `bootstrap.ps1` 成为唯一安装入口，并新增 sha256 完整性校验；conformance、CI、release
-  收敛为只针对 Go。`make retire-check` 守护不变量，详见 `docs/RETIREMENT.md`。
-
-### 变更
-
-- `make check` 收敛为 `lint + fmt-check + gotest + conformance + install-e2e`；
-  新增 `make install-e2e`（`bootstrap-e2e` + `update-e2e`，本地镜像不触网）
 
 ## [0.2.x] — 跨平台引擎（Go）
 

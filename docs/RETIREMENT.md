@@ -1,6 +1,6 @@
 # Bash 引擎退役记录
 
-> 状态：**已执行（2026-10-23，v0.3.0）**
+> 状态：**已执行（2026-10-23，v0.4.0）**
 > 存档 tag：`legacy-bash-0.3.0`（退役前最后一个双引擎提交）
 > 结论：`make retire-check` 断言不变量成立，Bash 引擎与相关白盒测试已彻底移除。
 
@@ -20,6 +20,8 @@
    ① 指定版本安装 ② 经 API 解析 latest ③ 归档被篡改时必须失败且不覆盖已装二进制；
    同时给 `bootstrap.sh` 增加了 sha256 校验（此前只下载不校验）。
 2. **`scripts/update-e2e.sh` 接入 CI**（新增 `install-e2e` job），并让 `make check` 覆盖安装/升级链路。
+   同一 job 的 Windows 矩阵跑 `scripts/bootstrap-e2e.ps1`（`bootstrap.ps1` 亦补上 sha256 校验），
+   使两平台安装入口都有自动化门禁。
 
 另外把 Bash 白盒测试里未被 conformance 覆盖的 4 条行为断言迁入规格测试：
 `C4-init-installs-shell-and-git`、`C5-install-single-module`、

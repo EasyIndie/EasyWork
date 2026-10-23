@@ -46,7 +46,7 @@ jobs:
             sudo apt-get install -y shfmt || go install mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
           fi
 
-      # Bash 引擎已于 0.3.0 退役；仅引导/辅助脚本保留 shell 检查。
+      # Bash 引擎已于 0.4.0 退役；仅引导/辅助脚本保留 shell 检查。
       - name: ShellCheck（bootstrap + scripts）
         shell: bash
         run: shellcheck bootstrap.sh scripts/*.sh
@@ -69,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - name: Checkout
@@ -81,13 +81,24 @@ jobs:
           go-version: '1.24'
           cache: false
 
-      # bootstrap.sh 是退役后 Unix 唯一安装入口，必须有自动化门禁；
-      # 两条链路都只访问 127.0.0.1 的本地镜像，不触网。
-      - name: bootstrap.sh 端到端（本地镜像 + sha256 + 篡改拦截）
+      # 安装入口必须有自动化门禁；所有链路只访问 127.0.0.1 的本地镜像，不触网。
+      - name: bootstrap.sh 端到端（Unix：本地镜像 + sha256 + 篡改拦截）
+        if: runner.os != 'Windows'
         shell: bash
         run: bash scripts/bootstrap-e2e.sh
 
-      - name: update 自升级端到端（本地镜像）
+      - name: bootstrap.ps1 端到端（Windows：本地镜像 + sha256 + 篡改拦截）
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # PS 5.1 按 ANSI 解析无 BOM 脚本：本脚本必须保持纯 ASCII
+          $bad = Select-String -Path scripts/bootstrap-e2e.ps1 -Pattern '[^\x00-\x7F]'
+          if ($bad) { Write-Error "scripts/bootstrap-e2e.ps1 必须是纯 ASCII（PS 5.1 编码）"; exit 1 }
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1
+
+      - name: update 自升级端到端（Unix：本地镜像）
+        if: runner.os != 'Windows'
         shell: bash
         run: bash scripts/update-e2e.sh
 
