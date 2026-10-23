@@ -1,6 +1,6 @@
 # 文件协议：Managed Section
 
-> 规格编号：C6 ｜ 对应 DESIGN §6.2 ｜ 状态：冻结
+> 规格编号：C6 ｜ 对应 DESIGN §6 ｜ 状态：冻结
 
 ## 目的
 

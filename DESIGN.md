@@ -128,7 +128,8 @@ email = "zhangsan@example.com"
 - 注册顺序 = `internal/modules/module.go` 的 `registry` 顺序 = `list` 输出顺序。
 - 目标文件写入只能经 `engine.ApplyManagedSection`；整体文件（plist / systemd unit）
   用 `engine.ApplyOwnedFile`（首次备份、卸载还原）。
-- 规格见 [05-module-interface.md](docs/spec/05-module-interface.md)、
+- 规格见 [05-module-interface.md](docs/spec/05-module-interface.md)；
+  managed section 的文件协议（标记、幂等、备份还原）见
   [06-managed-section.md](docs/spec/06-managed-section.md)。
 
 ---
