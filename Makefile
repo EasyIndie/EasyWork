@@ -1,4 +1,4 @@
-.PHONY: lint test fmt fmt-check check check-all install clean help dry-run conform build gotest acceptance update-e2e bootstrap-e2e install-e2e retire-check site
+.PHONY: lint test fmt fmt-check check check-all quick install clean help dry-run conform build gotest acceptance update-e2e bootstrap-e2e install-e2e retire-check site
 
 # ── EasyWork Makefile ──────────────────────────────────────────
 #
@@ -51,6 +51,9 @@ endif
 
 check: lint fmt-check gotest test install-e2e ## Run all checks (shell + Go + conformance + 安装链路)
 	@echo "✅ All checks passed"
+
+quick: fmt-check gotest test ## 快速门禁（< 1 分钟：shell 格式 + 单测 + conformance；提交前必跑）
+	@echo "✅ Quick gate passed（发 PR 前跑 quick 即可；重矩阵由 CI 在 main 上跑）"
 
 check-all: check ## 兼容旧习惯：check-all 等同 check
 

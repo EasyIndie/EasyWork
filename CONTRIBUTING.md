@@ -11,15 +11,22 @@
 ## 提 Pull Request
 
 1. Fork 本仓库
-2. 创建特性分支：
+2. 创建短生命周期分支（`feat/…`、`fix/…`、`docs/…`、`ci/…`）：
    ```bash
-   git checkout -b feature/my-feature
+   git switch -c fix/my-fix
    ```
-3. 开发并确保质量通过：
+3. 开发并确保快速门禁通过（< 1 分钟）：
    ```bash
-   make check   # ShellCheck + shfmt + go test + conformance + 安装链路
+   make quick   # shfmt 检查 + go test + conformance
    ```
-4. 提交 PR 到 `main` 分支
+   需要完整验证时跑 `make check`（外加 ShellCheck 与安装链路 e2e）。
+4. 提交到特性分支并创建 PR 到 `main`：
+   ```bash
+   git commit -m 'fix(doctor): 一句话说明改了什么、为什么'
+   git push -u origin HEAD && gh pr create --fill
+   ```
+5. PR 上 CI 只跑**快车道**（约 2 分钟）；合并到 `main` 后自动跑 macOS/Windows 矩阵
+   与安装链路。提交规范与发布流程见 [docs/ITERATION.md](docs/ITERATION.md)。
 
 ## 开发环境
 
@@ -49,6 +56,7 @@ sudo /tmp/bats/install.sh /usr/local
 | `make test` | 黑盒 conformance（`tests/conformance`，只测 Go） |
 | `make lint` / `make fmt` / `make fmt-check` | shell 脚本检查与格式化 |
 | `make check` | 完整质量检查（含安装链路 e2e） |
+| `make quick` | 快速门禁（< 1 分钟，提交前用） |
 | `make install-e2e` | bootstrap + update 本地镜像端到端（不触网） |
 | `make acceptance` | 一键验收（含交叉编译、退役不变量） |
 | `make retire-check` | 断言 Bash 引擎没有复活 |

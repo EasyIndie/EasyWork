@@ -24,7 +24,8 @@
 ## 3. 常用命令
 
 ```bash
-make check        # lint + fmt-check + gotest + conformance + 安装链路（提交前必跑）
+make quick        # 快速门禁（< 1 分钟：shfmt 检查 + go test + conformance；提交前跑这个）
+make check        # 完整质量门禁（lint + fmt-check + gotest + conformance + 安装链路）
 make gotest       # go test ./...
 make test         # 黑盒 conformance（tests/conformance，仅 Go）
 make lint         # ShellCheck（bootstrap.sh + scripts/）
@@ -77,6 +78,7 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 | `README.md` | 用户入口：安装、命令、模块、配置、防休眠 |
 | `docs/spec/` | **规范性契约**（行为等价判据），改行为先改这里 |
 | `docs/ACCEPTANCE.md` | 验收项与 CI 对应关系 |
+| `docs/ITERATION.md` | **迭代流程**：分层门禁、单次快速迭代、提交/发布规范 |
 | `docs/RETIREMENT.md` / `docs/ROLLBACK.md` | 退役记录与回滚方式 |
 | `DESIGN.md` | 设计决策与迁移历史（**非规范**，冲突以 `docs/spec/` 为准） |
 | `site/` | 产品页（GitHub Pages，`https://easywork.jokerhub.cn/`） |
@@ -101,8 +103,10 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 3. **新增模块**：`internal/modules/xxx.go` → 加入 `registry`（字母序）→ 补 `*_test.go`
    → 视需要补 `tests/conformance/*.bats`。
 4. **目标文件写入**只允许经 engine 的声明式函数，禁止模块手写备份/标记逻辑。
-5. 新增功能必须补测试；改动后先跑 `make check`。
+5. 新增功能必须补测试；改动后先跑 `make quick`，提交前如需完整验证再跑 `make check`。
 6. **不要恢复 Bash 引擎**；`make retire-check` 会拦。
+7. **依赖宿主环境的诊断项**（`pmset`/`powercfg`/电源/时间等）的 conformance 用例必须
+   注入假命令固定输出，不得断言宿主真实状态（否则会像 GitHub macOS 虚拟机那样长期红灯）。
 
 ## 9. 测试约定
 
@@ -115,9 +119,9 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
   解析无 BOM 脚本（脚本内有自检，CI 也有断言）
 - Go 单测：纯函数与可注入依赖（`Runner`/`Clock` 等），不得改动宿主真实状态
   （如 keepawake 测试注入 fake runner，不真的起 caffeinate/launchctl）
-- CI：`shell-lint`（shellcheck+shfmt）、`install-e2e`（三平台：Unix 跑 `bootstrap-e2e.sh`，
-  Windows 跑 `bootstrap-e2e.ps1`）、`go-engine`（三平台 go test + conformance + Windows smoke）、
-  `cross-compile`（6 目标）
+- CI：分两层——`quick`（每次 push/PR：shell 检查 + gofmt/vet + go test + conformance，
+  ~1–2 分钟）与重矩阵（仅 main 推送且确有代码改动：macOS ShellCheck、macOS/Windows
+  conformance、三平台安装链路、6 目标交叉编译）。PR 只跑快车道，流程见 `docs/ITERATION.md`
 - Windows 安装链路在 CI 上跑**两个宿主**：Windows PowerShell 5.1 与 PowerShell 7
   （`-ChildShell powershell|pwsh`），并额外覆盖文档里的 `irm | iex` 用法
 - `scripts/bootstrap-e2e.ps1` 必须保持**纯 ASCII**：Windows PowerShell 5.1 会按 ANSI

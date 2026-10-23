@@ -86,14 +86,76 @@ load helpers
     [ ! -e "$HOME/.vimrc" ]
 }
 
-# doctor 的电源策略自洽性检查（仅 macOS；pmset 矛盾组合容易"设了但没生效"）
-@test "C7-doctor-sleep-policy-on-macos" {
+# doctor 的电源策略自洽性检查（仅 macOS）。
+# 用假 pmset 固定输出，避免 VM/台式机 pmset 内容差异导致误报（曾经因此让 CI 红灯）。
+# 假 pmset 只提供数据，不改宿主电源设置。
+fake_pmset() {
+    mkdir -p "$TEST_HOME/bin"
+    cat > "$TEST_HOME/bin/pmset"
+    chmod +x "$TEST_HOME/bin/pmset"
+    printf '%s' "$TEST_HOME/bin"
+}
+
+@test "C7-doctor-sleep-policy-macos-two-branches" {
     [ "$(uname -s)" = "Darwin" ] || skip "macOS only"
-    ew_capture doctor --json --offline
+    bin="$(fake_pmset << 'SH'
+#!/bin/sh
+cat << 'OUT'
+Battery Power:
+ sleep                30
+ displaysleep         10
+ disksleep            10
+AC Power:
+ sleep                60
+ displaysleep         30
+ disksleep            10
+OUT
+SH
+)"
+    PATH="$bin:$PATH" ew_capture doctor --json --offline
     [ "$EW_RC" -eq 0 ]
-    [[ "$EW_OUT" == *'"name":"sleep-policy"'* ]]
-    [[ "$EW_OUT" == *'displaysleep='* ]]
-    [[ "$EW_OUT" == *'disksleep='* ]]
+    # 两侧都回显（AC 在前），顺序固定
+    [[ "$EW_OUT" == *'"name":"sleep-policy","ok":true'* ]]
+    [[ "$EW_OUT" == *'AC sleep=60m displaysleep=30m disksleep=10m；Battery sleep=30m displaysleep=10m disksleep=10m'* ]]
+}
+
+# 台式机与 CI 虚拟机只有 AC 分支：必须照常输出该项（缺电池不得整体跳过）
+@test "C7-doctor-sleep-policy-macos-desktop-ac-only" {
+    [ "$(uname -s)" = "Darwin" ] || skip "macOS only"
+    bin="$(fake_pmset << 'SH'
+#!/bin/sh
+cat << 'OUT'
+AC Power:
+ sleep                0
+ displaysleep         30
+ disksleep            0
+OUT
+SH
+)"
+    PATH="$bin:$PATH" ew_capture doctor --json --offline
+    [ "$EW_RC" -eq 0 ]
+    [[ "$EW_OUT" == *'"name":"sleep-policy","ok":true'* ]]
+    [[ "$EW_OUT" == *'AC sleep=0m displaysleep=30m disksleep=0m'* ]]
+    [[ "$EW_OUT" != *'Battery sleep='* ]]
+}
+
+@test "C7-doctor-sleep-policy-macos-flags-conflicts" {
+    [ "$(uname -s)" = "Darwin" ] || skip "macOS only"
+    bin="$(fake_pmset << 'SH'
+#!/bin/sh
+cat << 'OUT'
+AC Power:
+ sleep                30
+ displaysleep         30
+ disksleep            0
+OUT
+SH
+)"
+    PATH="$bin:$PATH" ew_capture doctor --json --offline
+    [ "$EW_RC" -eq 0 ]
+    [[ "$EW_OUT" == *'"name":"sleep-policy","ok":false'* ]]
+    [[ "$EW_OUT" == *'displaysleep 应小于 sleep'* ]]
+    [[ "$EW_OUT" == *'disksleep 应为非零'* ]]
 }
 
 @test "C7-doctor-no-sleep-policy-off-macos" {

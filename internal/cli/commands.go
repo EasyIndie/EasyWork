@@ -253,21 +253,27 @@ func (a *App) doctorChecks() []checkItem {
 	checks = append(checks, checkItem{Name: "console", OK: cp == 0 || cp == 65001, Detail: detail})
 
 	// 电源策略自洽性（仅 macOS）：pmset 自身会对矛盾组合告警，但容易只读不看。
-	// AC 与电池两侧都报：只报当前分支会漏掉另一侧的问题。
-	if ac, bat, ok := platform.SleepPolicies(); ok {
-		var problems []string
-		for _, br := range []struct {
-			name string
-			pol  platform.SleepPolicy
-		}{{"AC", ac}, {"Battery", bat}} {
-			for _, p := range br.pol.Problems() {
-				problems = append(problems, br.name+": "+p)
+	// 存在的分支都要报：只报当前分支会漏掉另一侧的问题；台式机/虚拟机只有 AC，
+	// 此时照常诊断（不能因为缺电池分支就整体跳过）。
+	if pols := platform.SleepPolicies(); len(pols) > 0 {
+		var (
+			problems []string
+			parts    []string
+		)
+		for _, pol := range pols {
+			name := "Battery"
+			if pol.OnAC {
+				name = "AC"
+			}
+			parts = append(parts, fmt.Sprintf("%s sleep=%dm displaysleep=%dm disksleep=%dm",
+				name, pol.Sleep, pol.DisplaySleep, pol.DiskSleep))
+			for _, p := range pol.Problems() {
+				problems = append(problems, name+": "+p)
 			}
 		}
-		detail := fmt.Sprintf("AC sleep=%dm displaysleep=%dm disksleep=%dm；Battery sleep=%dm displaysleep=%dm disksleep=%dm",
-			ac.Sleep, ac.DisplaySleep, ac.DiskSleep, bat.Sleep, bat.DisplaySleep, bat.DiskSleep)
+		detail := strings.Join(parts, "；")
 		if len(problems) == 0 {
-			detail += "（两侧自洽）"
+			detail += "（自洽）"
 		} else {
 			detail += "（" + strings.Join(problems, "；") + "）"
 		}

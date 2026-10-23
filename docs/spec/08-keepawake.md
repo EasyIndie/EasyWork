@@ -116,7 +116,12 @@ persist = "false"   # 是否写入开机自启单元
 | `displaysleep >= sleep` | displaysleep 应小于 sleep（否则熄屏设置不生效） |
 | `disksleep == 0` | disksleep 应为非零（sleep 非零时） |
 
-- **AC 与电池两侧都检查**并同时回显（只看当前分支会漏掉另一侧），`sleep=0`（永不）不判为矛盾；
+- **存在的分支都检查**并回显（`AC` 在前、`Battery` 在后，`；` 分隔）：只看当前分支
+  会漏掉另一侧的矛盾；台式机与虚拟机只有 `AC`，此时照常输出只含 `AC` 的该项
+  （**不得**因缺电池分支而整体跳过——这是 0.4.4 的缺陷，已由 C7 用例锁死）；
+- `sleep=0`（永不）不判为矛盾；
+- `detail` 形如 `AC sleep=60m displaysleep=30m disksleep=10m；Battery sleep=30m displaysleep=10m disksleep=10m（自洽）`，
+  有矛盾时 `ok=false` 且把问题附在括号内；
 - 非 macOS 平台不输出该项；`--json` 中同样只有 macOS 出现 `sleep-policy`。
 
 ## 7. 运行态与幂等
