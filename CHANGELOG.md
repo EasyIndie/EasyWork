@@ -5,22 +5,32 @@
 
 ## [Unreleased]
 
-### 变更
+（暂无）
 
-- 产品页精简：只保留「安装 → 三步开始 → 3 条理由 → 防休眠 → 6 条常用命令」，
-  移除模块矩阵、可信性卡片与文档网格（并入页脚一行）；HTML 14.9 KB → 6.6 KB
-- 修复命令过长时被横向滚动条压住文字：安装命令改为「标签+复制」在上、命令独占一行并
-  自动换行（`white-space: pre-wrap` + `overflow-wrap: anywhere`），代码块不再出现横向滚动条，
-  复制内容仍为单行命令
-- 统一容器宽度（`--container: 940px`）：头部、正文、页脚左右边缘对齐，
-  修正此前 hero 因单独 `max-width` 而比其余区块内缩约 105px 的问题
+## [0.4.4] - 2026-10-23
 
 ### 新增
 
-- **产品页（GitHub Pages）**：`site/` 下的极简静态页（无框架、无外链资源、亮/暗随系统），
-  含安装命令一键复制、命令与模块一览、防休眠能力说明与文档入口；
-  `.github/workflows/pages.yml` 直接部署 `site/`，`make site` 可本地预览；
-  Pages 已启用 Enforce HTTPS（HTTP → 301）。
+- **产品页**：`site/` 纯静态单页（无框架、无外链字体/图片、亮暗随系统），
+  GitHub Pages 部署到 <https://easywork.jokerhub.cn/>（自定义域名 + 强制 HTTPS）；
+  含安装命令一键复制、真实终端输出、命令参考、防休眠说明。`make site` 可本地预览
+
+### 修复
+
+- `ew keepawake on` 成功后 `ew status` 仍显示 keepawake「未安装」：现在同步写入
+  manifest 的 `[keepawake] installed=true`（无 manifest 时按需创建；`--dry-run` 不写盘）
+- 产品页命令过长时被横向滚动条压住文字：安装命令改为「标签 + 复制」在上、命令独占一行，
+  代码块改用 `pre-wrap` 自动换行（复制内容仍是单行命令），不再出现横向滚动条
+
+### 变更
+
+- **文档精简并与实现对齐**：README 重写（安装 / 命令 / 模块 / 防休眠 / 配置 / JSON / 开发）；
+  ACCEPTANCE 收敛为当前验收项（188 → 55 行）；DESIGN 压缩至 495 行（796 → 495，
+  去掉重复的 Bash API 描述与过期状态表）；AGENTS 增加文档地图
+- 删除文档中并不存在的 `ew apply`：`docs/spec/04` 去掉该行，`docs/spec/08` 改为
+  `ew install keepawake`（install 即幂等收敛）
+- 产品页视觉：首屏两栏、标题层级与间距统一、终端块区分提示符/输出/状态符号、
+  hairline 分隔与层级（去掉卡片网格与大写 eyebrow）
 
 ## [0.4.3] - 2026-10-23
 
