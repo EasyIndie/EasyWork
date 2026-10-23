@@ -85,3 +85,20 @@ load helpers
     ! grep -q '^\[vim\]' "$EASYWORK_HOME/manifest"
     [ ! -e "$HOME/.vimrc" ]
 }
+
+# doctor 的电源策略自洽性检查（仅 macOS；pmset 矛盾组合容易"设了但没生效"）
+@test "C7-doctor-sleep-policy-on-macos" {
+    [ "$(uname -s)" = "Darwin" ] || skip "macOS only"
+    ew_capture doctor --json --offline
+    [ "$EW_RC" -eq 0 ]
+    [[ "$EW_OUT" == *'"name":"sleep-policy"'* ]]
+    [[ "$EW_OUT" == *'displaysleep='* ]]
+    [[ "$EW_OUT" == *'disksleep='* ]]
+}
+
+@test "C7-doctor-no-sleep-policy-off-macos" {
+    [ "$(uname -s)" != "Darwin" ] || skip "non-macOS only"
+    ew_capture doctor --json --offline
+    [ "$EW_RC" -eq 0 ]
+    [[ "$EW_OUT" != *'"name":"sleep-policy"'* ]]
+}

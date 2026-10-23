@@ -74,3 +74,49 @@ func TestEnableUTF8ConsoleIdempotent(t *testing.T) {
 	restore2 := EnableUTF8Console()
 	restore2()
 }
+
+func TestParseSleepPolicyBatteryBranch(t *testing.T) {
+	out := `Battery Power:
+ lidwake              1
+ displaysleep         30
+ sleep                10
+ disksleep            0
+AC Power:
+ displaysleep         10
+ sleep                0
+ disksleep            10
+`
+	pol, ok := ParseSleepPolicy(out, false)
+	if !ok {
+		t.Fatal("应解析出电池分支")
+	}
+	if pol.Sleep != 10 || pol.DisplaySleep != 30 || pol.DiskSleep != 0 || pol.OnAC {
+		t.Fatalf("电池分支解析错误: %+v", pol)
+	}
+	problems := pol.Problems()
+	if len(problems) != 2 {
+		t.Fatalf("应报出 2 条矛盾（displaysleep>=sleep、disksleep=0），得到 %v", problems)
+	}
+
+	ac, ok := ParseSleepPolicy(out, true)
+	if !ok || ac.Sleep != 0 || !ac.OnAC {
+		t.Fatalf("AC 分支解析错误: %+v ok=%v", ac, ok)
+	}
+	if len(ac.Problems()) != 0 {
+		t.Fatalf("sleep=0 时应视为自洽，得到 %v", ac.Problems())
+	}
+}
+
+func TestParseSleepPolicyRejectsGarbage(t *testing.T) {
+	if _, ok := ParseSleepPolicy("no sections here\n", false); ok {
+		t.Fatal("无对应分支时应返回 ok=false")
+	}
+}
+
+func TestParseSleepPolicyConsistent(t *testing.T) {
+	out := "Battery Power:\n displaysleep         10\n sleep                30\n disksleep            10\n"
+	pol, ok := ParseSleepPolicy(out, false)
+	if !ok || len(pol.Problems()) != 0 {
+		t.Fatalf("10/30/10 应判定自洽，得到 %+v problems=%v", pol, pol.Problems())
+	}
+}

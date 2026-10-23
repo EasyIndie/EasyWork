@@ -106,6 +106,19 @@ persist = "false"   # 是否写入开机自启单元
 | 电量耗尽 / 过热 | 强制休眠 | — |
 | 重启 / 注销 | 断言释放 | 指向 `persist=true` |
 
+### 6.1 `ew doctor` 的电源策略自洽检查
+
+`pmset` 对矛盾组合只会打印 Warning 而**照样写入**，用户很容易"设了以为生效"。
+`ew doctor` 因此在 macOS 上增加 `sleep-policy` 检查项（只读，不改系统策略）：
+
+| 判据（`sleep > 0` 时） | 提示 |
+|---|---|
+| `displaysleep >= sleep` | displaysleep 应小于 sleep（否则熄屏设置不生效） |
+| `disksleep == 0` | disksleep 应为非零（sleep 非零时） |
+
+- 只看**当前电源**分支（AC 或 Battery），`sleep=0`（永不）不判为矛盾；
+- 非 macOS 平台不输出该项；`--json` 中同样只有 macOS 出现 `sleep-policy`。
+
 ## 7. 运行态与幂等
 
 - 状态文件：`$EASYWORK_HOME/run/keepawake.json`

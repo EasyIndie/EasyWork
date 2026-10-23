@@ -252,6 +252,23 @@ func (a *App) doctorChecks() []checkItem {
 	}
 	checks = append(checks, checkItem{Name: "console", OK: cp == 0 || cp == 65001, Detail: detail})
 
+	// 电源策略自洽性（仅 macOS）：pmset 自身会对矛盾组合告警，但容易只读不看。
+	if pol, ok := platform.SleepPolicyNow(); ok {
+		where := "battery"
+		if pol.OnAC {
+			where = "AC"
+		}
+		detail := fmt.Sprintf("%s sleep=%dm displaysleep=%dm disksleep=%dm",
+			where, pol.Sleep, pol.DisplaySleep, pol.DiskSleep)
+		problems := pol.Problems()
+		if len(problems) == 0 {
+			detail += "（自洽）"
+		} else {
+			detail += "（" + strings.Join(problems, "；") + "）"
+		}
+		checks = append(checks, checkItem{Name: "sleep-policy", OK: len(problems) == 0, Detail: detail})
+	}
+
 	if checkNetwork() {
 		checks = append(checks, checkItem{Name: "network", OK: true, Detail: "github.com reachable"})
 	} else {

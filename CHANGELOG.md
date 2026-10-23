@@ -5,7 +5,11 @@
 
 ## [Unreleased]
 
-（暂无）
+### 新增
+
+- `ew doctor` 新增 `sleep-policy` 检查（仅 macOS）：检测 `pmset` 的
+  `displaysleep >= sleep`、`sleep > 0 && disksleep == 0` 这类"设了但不生效"的矛盾组合
+  （`pmset` 只告警、照写），并回显当前电源分支的实际值。只读，不改系统策略。
 
 ## [0.4.1] - 2026-10-23
 
