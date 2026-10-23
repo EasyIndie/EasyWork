@@ -120,3 +120,32 @@ func TestParseSleepPolicyConsistent(t *testing.T) {
 		t.Fatalf("10/30/10 应判定自洽，得到 %+v problems=%v", pol, pol.Problems())
 	}
 }
+
+func TestParseSleepPolicyBothBranches(t *testing.T) {
+	out := `Battery Power:
+ displaysleep         10
+ sleep                30
+ disksleep            10
+AC Power:
+ displaysleep         30
+ sleep                60
+ disksleep            10
+`
+	ac, bat, ok := func() (SleepPolicy, SleepPolicy, bool) {
+		a, okA := ParseSleepPolicy(out, true)
+		b, okB := ParseSleepPolicy(out, false)
+		return a, b, okA && okB
+	}()
+	if !ok {
+		t.Fatal("两侧都应解析成功")
+	}
+	if ac.Sleep != 60 || ac.DisplaySleep != 30 || ac.DiskSleep != 10 {
+		t.Fatalf("AC 解析错误: %+v", ac)
+	}
+	if bat.Sleep != 30 || bat.DisplaySleep != 10 || bat.DiskSleep != 10 {
+		t.Fatalf("Battery 解析错误: %+v", bat)
+	}
+	if len(ac.Problems()) != 0 || len(bat.Problems()) != 0 {
+		t.Fatalf("两侧自洽却报问题: ac=%v bat=%v", ac.Problems(), bat.Problems())
+	}
+}

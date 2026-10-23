@@ -253,16 +253,21 @@ func (a *App) doctorChecks() []checkItem {
 	checks = append(checks, checkItem{Name: "console", OK: cp == 0 || cp == 65001, Detail: detail})
 
 	// 电源策略自洽性（仅 macOS）：pmset 自身会对矛盾组合告警，但容易只读不看。
-	if pol, ok := platform.SleepPolicyNow(); ok {
-		where := "battery"
-		if pol.OnAC {
-			where = "AC"
+	// AC 与电池两侧都报：只报当前分支会漏掉另一侧的问题。
+	if ac, bat, ok := platform.SleepPolicies(); ok {
+		var problems []string
+		for _, br := range []struct {
+			name string
+			pol  platform.SleepPolicy
+		}{{"AC", ac}, {"Battery", bat}} {
+			for _, p := range br.pol.Problems() {
+				problems = append(problems, br.name+": "+p)
+			}
 		}
-		detail := fmt.Sprintf("%s sleep=%dm displaysleep=%dm disksleep=%dm",
-			where, pol.Sleep, pol.DisplaySleep, pol.DiskSleep)
-		problems := pol.Problems()
+		detail := fmt.Sprintf("AC sleep=%dm displaysleep=%dm disksleep=%dm；Battery sleep=%dm displaysleep=%dm disksleep=%dm",
+			ac.Sleep, ac.DisplaySleep, ac.DiskSleep, bat.Sleep, bat.DisplaySleep, bat.DiskSleep)
 		if len(problems) == 0 {
-			detail += "（自洽）"
+			detail += "（两侧自洽）"
 		} else {
 			detail += "（" + strings.Join(problems, "；") + "）"
 		}

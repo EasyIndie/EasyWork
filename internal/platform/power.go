@@ -45,16 +45,19 @@ type SleepPolicy struct {
 	OnAC         bool
 }
 
-// SleepPolicyNow 读取**当前电源**下的 pmset 策略；非 macOS 或读取失败时 ok=false。
-func SleepPolicyNow() (SleepPolicy, bool) {
+// SleepPolicies 一次性读取 AC 与电池两侧的 pmset 策略。
+// 两侧都要看：只报当前分支会漏掉另一侧的矛盾（拔电后才发现设置没生效）。
+func SleepPolicies() (ac, battery SleepPolicy, ok bool) {
 	if DetectOS() != MacOS {
-		return SleepPolicy{}, false
+		return SleepPolicy{}, SleepPolicy{}, false
 	}
 	out, err := exec.Command("pmset", "-g", "custom").Output()
 	if err != nil {
-		return SleepPolicy{}, false
+		return SleepPolicy{}, SleepPolicy{}, false
 	}
-	return ParseSleepPolicy(string(out), OnAC())
+	ac, okAC := ParseSleepPolicy(string(out), true)
+	battery, okBat := ParseSleepPolicy(string(out), false)
+	return ac, battery, okAC && okBat
 }
 
 // ParseSleepPolicy 从 `pmset -g custom` 输出中解析指定电源分支。

@@ -116,7 +116,7 @@ persist = "false"   # 是否写入开机自启单元
 | `displaysleep >= sleep` | displaysleep 应小于 sleep（否则熄屏设置不生效） |
 | `disksleep == 0` | disksleep 应为非零（sleep 非零时） |
 
-- 只看**当前电源**分支（AC 或 Battery），`sleep=0`（永不）不判为矛盾；
+- **AC 与电池两侧都检查**并同时回显（只看当前分支会漏掉另一侧），`sleep=0`（永不）不判为矛盾；
 - 非 macOS 平台不输出该项；`--json` 中同样只有 macOS 出现 `sleep-policy`。
 
 ## 7. 运行态与幂等
