@@ -45,19 +45,30 @@ type SleepPolicy struct {
 	OnAC         bool
 }
 
-// SleepPolicies 一次性读取 AC 与电池两侧的 pmset 策略。
+// SleepPolicies 一次性读取 pmset 的电源策略分支。
 // 两侧都要看：只报当前分支会漏掉另一侧的矛盾（拔电后才发现设置没生效）。
-func SleepPolicies() (ac, battery SleepPolicy, ok bool) {
+// 返回的切片只含**实际存在**的分支（AC 在前）：台式机与虚拟机没有电池分支，
+// 若强行要求两侧齐全，这些机器会永远拿不到 sleep-policy 诊断。
+func SleepPolicies() []SleepPolicy {
 	if DetectOS() != MacOS {
-		return SleepPolicy{}, SleepPolicy{}, false
+		return nil
 	}
 	out, err := exec.Command("pmset", "-g", "custom").Output()
 	if err != nil {
-		return SleepPolicy{}, SleepPolicy{}, false
+		return nil
 	}
-	ac, okAC := ParseSleepPolicy(string(out), true)
-	battery, okBat := ParseSleepPolicy(string(out), false)
-	return ac, battery, okAC && okBat
+	return ParseSleepPolicies(string(out))
+}
+
+// ParseSleepPolicies 从 `pmset -g custom` 输出中解析出实际出现的分支（AC 在前）。
+func ParseSleepPolicies(text string) []SleepPolicy {
+	var pols []SleepPolicy
+	for _, onAC := range []bool{true, false} {
+		if pol, ok := ParseSleepPolicy(text, onAC); ok {
+			pols = append(pols, pol)
+		}
+	}
+	return pols
 }
 
 // ParseSleepPolicy 从 `pmset -g custom` 输出中解析指定电源分支。

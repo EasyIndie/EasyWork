@@ -149,3 +149,50 @@ AC Power:
 		t.Fatalf("两侧自洽却报问题: ac=%v bat=%v", ac.Problems(), bat.Problems())
 	}
 }
+
+// 台式机 / CI 虚拟机只有 AC 分支：必须照常返回 AC，不得因缺电池而整体放弃。
+func TestParseSleepPoliciesDesktopACOnly(t *testing.T) {
+	out := `AC Power:
+ displaysleep         30
+ sleep                0
+ disksleep            0
+`
+	pols := ParseSleepPolicies(out)
+	if len(pols) != 1 {
+		t.Fatalf("台式机应只解析出 AC 分支，得到 %d 个: %+v", len(pols), pols)
+	}
+	if !pols[0].OnAC || pols[0].DisplaySleep != 30 || pols[0].Sleep != 0 {
+		t.Fatalf("AC 分支解析错误: %+v", pols[0])
+	}
+	// sleep=0（永不）不判为矛盾。
+	if len(pols[0].Problems()) != 0 {
+		t.Fatalf("sleep=0 应视为自洽，得到 %v", pols[0].Problems())
+	}
+}
+
+// AC 在前、电池在后的稳定顺序（doctor 的 detail 依赖它）。
+func TestParseSleepPoliciesOrderAndCount(t *testing.T) {
+	out := `Battery Power:
+ sleep                30
+ displaysleep         10
+ disksleep            10
+AC Power:
+ sleep                60
+ displaysleep         30
+ disksleep            10
+`
+	pols := ParseSleepPolicies(out)
+	if len(pols) != 2 {
+		t.Fatalf("两侧齐全时应返回 2 个分支，得到 %d 个: %+v", len(pols), pols)
+	}
+	if !pols[0].OnAC || pols[1].OnAC {
+		t.Fatalf("分支顺序应为 AC、Battery，得到 %+v", pols)
+	}
+}
+
+// 无任何可解析分支（pmset 输出异常）时返回空，doctor 不输出该项。
+func TestParseSleepPoliciesEmpty(t *testing.T) {
+	if pols := ParseSleepPolicies("garbage\n"); len(pols) != 0 {
+		t.Fatalf("无分支时应返回空，得到 %+v", pols)
+	}
+}

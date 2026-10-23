@@ -5,7 +5,14 @@
 
 ## [Unreleased]
 
-（暂无）
+### 修复
+
+- **`ew doctor` 在台式机 / 虚拟机上丢失 `sleep-policy` 检查**：原实现要求 `pmset -g custom`
+  同时提供 AC 与电池两个分支，否则整项跳过；Mac mini/Studio/iMac 与 CI 虚拟机只有
+  `AC Power:` 分支，因此这项诊断从未生效（GitHub macOS 虚拟机上的 CI 一直因此红灯）。
+  现在按分支是否存在分别诊断并回显（`AC` 在前、`Battery` 在后），`sleep=0` 仍不判为矛盾
+- **conformance 的 `sleep-policy` 用例改为注入假 `pmset`**：原先直接断言宿主 `pmset` 输出，
+  随 CI 机型漂移而失败；现覆盖「两侧」「仅 AC（台式机）」「矛盾组合」三组确定性用例
 
 ## [0.4.4] - 2026-10-23
 
