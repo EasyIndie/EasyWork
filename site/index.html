@@ -6,7 +6,7 @@
 <title>EasyWork — 开发环境配置工具</title>
 <meta name="description" content="用一份 config.toml 安装并管理 Shell、Git、Vim、gh 与 AI 工具，可选设备防休眠。Go 静态单二进制，macOS / Linux / Windows 通用。">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0e12" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:title" content="EasyWork — 开发环境配置工具">
 <meta property="og:description" content="Go 静态单二进制 · 声明式 config.toml · 幂等安装 · macOS / Linux / Windows">
@@ -22,12 +22,13 @@
   <div class="container header-inner">
     <a class="brand" href="./" aria-label="EasyWork 首页">
       <span class="brand-mark" aria-hidden="true">ew</span>
-      <span>EasyWork</span>
+      <span class="brand-name">EasyWork</span>
     </a>
     <nav class="nav" aria-label="主导航">
       <a href="#install">安装</a>
       <a href="#usage">用法</a>
       <a href="#reference">参考</a>
+      <a href="#keepawake">防休眠</a>
       <a class="nav-ext" href="https://github.com/EasyIndie/EasyWork" rel="noopener">GitHub</a>
     </nav>
   </div>
@@ -36,50 +37,64 @@
 <main id="main">
 
   <section class="hero container" id="install">
-    <h1>EasyWork</h1>
-    <p class="lede">
-      开发环境配置工具。用一份 <code>config.toml</code> 安装并管理 Shell、Git、Vim、gh、
-      AI 工具，以及可选的设备防休眠。Go 静态单二进制，支持 macOS、Linux、Windows。
-    </p>
-
-    <div class="code rows">
-      <div class="row" data-copy-block>
-        <div class="row-head">
-          <span class="os">macOS / Linux</span>
-          <button class="copy" type="button" aria-label="复制 macOS 与 Linux 安装命令">复制</button>
-        </div>
-        <code class="cmd">curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash</code>
-      </div>
-      <div class="row" data-copy-block>
-        <div class="row-head">
-          <span class="os">Windows · PowerShell</span>
-          <button class="copy" type="button" aria-label="复制 Windows 安装命令">复制</button>
-        </div>
-        <code class="cmd">irm https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.ps1 | iex</code>
-      </div>
+    <div class="hero-copy">
+      <h1>EasyWork</h1>
+      <p class="lede">
+        用一份 <code>config.toml</code> 安装并管理 Shell、Git、Vim、gh 与 AI 工具，
+        以及可选的设备防休眠。安装幂等、可回滚。
+      </p>
+      <ul class="spec-list">
+        <li>Go 静态单二进制，零运行时依赖</li>
+        <li>macOS · Linux · Windows，同一套契约</li>
+        <li>MIT 许可，无遥测</li>
+      </ul>
     </div>
 
-    <p class="note">
-      安装时校验 sha256，装入 <code>/usr/local/bin</code> 或 <code>~/.local/bin</code>；
-      固定版本用 <code>EASYWORK_VERSION</code>。其余版本见
-      <a href="https://github.com/EasyIndie/EasyWork/releases" rel="noopener">Releases</a>。
-    </p>
+    <div class="hero-install">
+      <div class="code">
+        <div class="row" data-copy-block>
+          <div class="row-head">
+            <span class="os">macOS / Linux</span>
+            <button class="copy" type="button" aria-label="复制 macOS 与 Linux 安装命令">复制</button>
+          </div>
+          <code class="cmd">curl -sL https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.sh | bash</code>
+        </div>
+        <div class="row" data-copy-block>
+          <div class="row-head">
+            <span class="os">Windows · PowerShell</span>
+            <button class="copy" type="button" aria-label="复制 Windows 安装命令">复制</button>
+          </div>
+          <code class="cmd">irm https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.ps1 | iex</code>
+        </div>
+      </div>
+      <p class="note">
+        安装时校验 sha256，写入 <code>/usr/local/bin</code> 或 <code>~/.local/bin</code>；
+        固定版本设 <code>EASYWORK_VERSION</code>，其余见
+        <a href="https://github.com/EasyIndie/EasyWork/releases" rel="noopener">Releases</a>。
+      </p>
+    </div>
   </section>
 
   <section class="container" id="usage">
     <h2>用法</h2>
-    <div class="code block" data-copy-block>
+    <div class="code terminal" data-copy-block>
       <div class="block-head">
         <span>终端</span>
         <button class="copy" type="button" aria-label="复制用法命令">复制</button>
       </div>
-      <pre><code class="cmd">ew init
-ew install --yes
-ew status</code></pre>
+      <pre><code class="cmd"><span class="p">$</span> ew init
+<span class="p">$</span> ew install --yes
+<span class="p">$</span> ew status
+<span class="out"><span class="ok">●</span> EasyWork 0.4.3</span>
+<span class="out"><span class="ok">✓</span> shell
+<span class="ok">✓</span> git
+<span class="ok">✓</span> gh
+<span class="ok">✓</span> vim
+<span class="ok">✓</span> ai</span></code></pre>
     </div>
     <p class="note">
       重复执行是安全的：已经正确的部分不会被重写。<code>--dry-run</code> 预览变更，
-      <code>--json</code> 输出给脚本与自动化消费。
+      <code>--json</code> 输出供脚本与自动化消费。
     </p>
   </section>
 
@@ -103,30 +118,32 @@ ew status</code></pre>
       </table>
     </div>
     <p class="note">
-      完整命令见 <code>ew help</code>，模块清单见 <code>ew list</code>，
+      完整命令见 <code>ew help</code>，模块清单见 <code>ew list</code>；
       契约与 JSON 格式见 <a href="https://github.com/EasyIndie/EasyWork/tree/main/docs/spec" rel="noopener">接口规格</a>。
     </p>
   </section>
 
   <section class="container" id="keepawake">
     <h2>设备防休眠</h2>
-    <p class="note before-code">
+    <p class="prose">
       长任务不被打断时使用 <code>ew keepawake</code>。它只注册系统电源断言
       （macOS <code>caffeinate</code>、Linux <code>systemd-inhibit</code>、
       Windows <code>SetThreadExecutionState</code>），不需要 sudo，也不修改系统电源策略。
     </p>
-    <div class="code block" data-copy-block>
+    <div class="code terminal" data-copy-block>
       <div class="block-head">
         <span>开启并设为开机自启</span>
         <button class="copy" type="button" aria-label="复制防休眠命令">复制</button>
       </div>
-      <pre><code class="cmd">ew keepawake on --persist
-ew keepawake status</code></pre>
+      <pre><code class="cmd"><span class="p">$</span> ew keepawake on --persist
+<span class="p">$</span> ew keepawake status
+<span class="out">期望  开启 mode=ac persist=on</span>
+<span class="out">实际  active (pid 75111, backend=caffeinate)</span></code></pre>
     </div>
     <dl class="facts">
       <div>
         <dt>mode</dt>
-        <dd><code>ac</code>：接电生效、拔电按系统策略节能；<code>always</code>：电池也阻止睡眠</dd>
+        <dd><code>ac</code> 接电生效、拔电按系统策略节能；<code>always</code> 电池也阻止睡眠</dd>
       </div>
       <div>
         <dt>status</dt>
@@ -156,10 +173,6 @@ ew keepawake status</code></pre>
         <dt>兼容</dt>
         <dd><code>config.toml</code>、manifest 与 managed section 标记跨版本不变，升降级无需迁移</dd>
       </div>
-      <div>
-        <dt>许可</dt>
-        <dd>MIT；无遥测，不收集任何使用数据</dd>
-      </div>
     </dl>
   </section>
 
@@ -167,7 +180,6 @@ ew keepawake status</code></pre>
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <p>© EasyIndie · MIT</p>
     <p class="footer-links">
       <a href="https://github.com/EasyIndie/EasyWork" rel="noopener">源码</a>
       <a href="https://github.com/EasyIndie/EasyWork/tree/main/docs/spec" rel="noopener">接口规格</a>
@@ -175,6 +187,7 @@ ew keepawake status</code></pre>
       <a href="https://github.com/EasyIndie/EasyWork/releases" rel="noopener">Releases</a>
       <a href="https://github.com/EasyIndie/EasyWork/issues" rel="noopener">问题反馈</a>
     </p>
+    <p class="footer-legal">© EasyIndie · MIT</p>
   </div>
 </footer>
 
