@@ -87,14 +87,12 @@ jobs:
         shell: bash
         run: bash scripts/bootstrap-e2e.sh
 
-      - name: bootstrap.ps1 端到端（Windows：本地镜像 + sha256 + 篡改拦截）
+      # 注意：本步骤的内联脚本必须保持纯 ASCII（Windows PowerShell 5.1 按 ANSI 解析无 BOM 脚本）
+      - name: bootstrap.ps1 end-to-end (Windows, local mirror)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          # PS 5.1 按 ANSI 解析无 BOM 脚本：本脚本必须保持纯 ASCII
-          $bad = Select-String -Path scripts/bootstrap-e2e.ps1 -Pattern '[^\x00-\x7F]'
-          if ($bad) { Write-Error "scripts/bootstrap-e2e.ps1 必须是纯 ASCII（PS 5.1 编码）"; exit 1 }
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-e2e.ps1
 
       - name: update 自升级端到端（Unix：本地镜像）

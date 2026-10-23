@@ -62,7 +62,16 @@ start_server() {
     local dir="$1" port="$2"
     python3 -m http.server "$port" --bind 127.0.0.1 --directory "$dir" > "$work/httpd-$port.log" 2>&1 &
     server_pid="$!"
-    sleep 1
+    # 冷启动的 runner 上 HTTP 服务可能 >1s 才可用：轮询就绪，失败时打印日志
+    local i=0
+    while ! curl -fsS -o /dev/null "http://127.0.0.1:${port}/"; do
+        i=$((i + 1))
+        if [[ $i -ge 50 ]]; then
+            cat "$work/httpd-$port.log" >&2
+            fail "本地镜像启动失败（:${port}）"
+        fi
+        sleep 0.2
+    done
 }
 
 echo "== 构建待发布二进制 $VER =="

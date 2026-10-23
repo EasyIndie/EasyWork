@@ -60,7 +60,17 @@ printf '{"tag_name":"%s"}\n' "$NEW_VER" > "$mirror/latest.json"
 echo "== 启动本地镜像 (:${port}) =="
 python3 -m http.server "$port" --bind 127.0.0.1 --directory "$mirror" > "$work/httpd.log" 2>&1 &
 server_pid="$!"
-sleep 1
+# 冷启动 runner 上 HTTP 服务可能 >1s 才可用：轮询就绪，失败时打印日志
+i=0
+while ! curl -fsS -o /dev/null "http://127.0.0.1:${port}/latest.json"; do
+    i=$((i + 1))
+    if [[ $i -ge 50 ]]; then
+        cat "$work/httpd.log" >&2
+        echo "本地镜像启动失败（:${port}）" >&2
+        exit 1
+    fi
+    sleep 0.2
+done
 
 home="$work/home"
 mkdir -p "$home"

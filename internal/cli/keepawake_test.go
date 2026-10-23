@@ -69,6 +69,20 @@ func TestKeepawakeHints(t *testing.T) {
 	}
 }
 
+// 合盖提示只在 macOS 有意义（Linux/Windows 后端语义不同）。
+func TestKeepawakeHintActiveIsPlatformSpecific(t *testing.T) {
+	hint := keepawakeHint(keepawake.Status{Actual: keepawake.Actual{State: keepawake.StateActive}})
+	if platform.DetectOS() == platform.MacOS {
+		if !contains(hint, "合盖") {
+			t.Fatalf("macOS 的 active 提示应包含合盖警告，得到 %q", hint)
+		}
+		return
+	}
+	if hint != "" {
+		t.Fatalf("非 macOS 不应给出合盖提示，得到 %q", hint)
+	}
+}
+
 func TestDescribeSpec(t *testing.T) {
 	if got := describeSpec(keepawake.Spec{}); got != "关闭" {
 		t.Fatalf("关闭描述错误: %q", got)

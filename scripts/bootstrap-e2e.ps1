@@ -30,6 +30,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
+# Self-check: PS 5.1 parses BOM-less scripts as ANSI, so this file must stay ASCII.
+$bytes = [IO.File]::ReadAllBytes($PSCommandPath)
+$nonAscii = @($bytes | Where-Object { $_ -gt 127 })
+if ($nonAscii.Count -gt 0) {
+    throw "scripts/bootstrap-e2e.ps1 must be pure ASCII (found $($nonAscii.Count) non-ASCII bytes)"
+}
+
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not $BootstrapScript) {
     $candidate = Join-Path $Root 'bootstrap.ps1'
@@ -107,7 +114,7 @@ function Invoke-Bootstrap($Base, $BinDir, [switch]$Latest) {
     # PS 5.1 parses BOM-less UTF-8 scripts as ANSI; run a BOM-added copy instead
     $bootCopy = Join-Path $Work 'bootstrap.run.ps1'
     [IO.File]::WriteAllText($bootCopy, (Get-Content -Raw -Encoding UTF8 $BootstrapScript), (New-Object System.Text.UTF8Encoding($true)))
-    # 用 Start-Process 重定向，避免子进程 stderr 触发 NativeCommandError
+    # Use Start-Process with redirection: child stderr would otherwise raise NativeCommandError
     $outFile = Join-Path $Work 'bootstrap.out'
     $errFile = Join-Path $Work 'bootstrap.err'
     $proc = Start-Process -FilePath 'powershell' -NoNewWindow -Wait -PassThru `
