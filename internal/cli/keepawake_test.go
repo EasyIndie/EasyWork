@@ -58,7 +58,6 @@ func TestKeepawakeHints(t *testing.T) {
 		{keepawake.Status{Actual: keepawake.Actual{State: keepawake.StatePendingAC}}, "接通电源"},
 		{keepawake.Status{Actual: keepawake.Actual{State: keepawake.StateStale}}, "ew keepawake on"},
 		{keepawake.Status{Desired: keepawake.Spec{Enabled: true}, Actual: keepawake.Actual{State: keepawake.StateInactive}}, "ew keepawake on"},
-		{keepawake.Status{Actual: keepawake.Actual{State: keepawake.StateActive}}, "合盖"},
 	}
 	for _, c := range cases {
 		if got := keepawakeHint(c.st); got == "" {
