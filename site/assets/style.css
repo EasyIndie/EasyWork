@@ -429,6 +429,8 @@ h2::before {
 @media (max-width: 560px) {
   .facts > div { grid-template-columns: 1fr; gap: 0.1rem; }
   .facts dt { padding-top: 0; }
+  /* 窄屏留白有限，竖线会贴边：只保留字号与间距建立的层级 */
+  h2::before { display: none; }
 }
 
 /* ── 表格 ───────────────────────────────────────────────── */
