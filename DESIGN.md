@@ -67,322 +67,69 @@ EasyWork 是一套开发环境配置 CLI（v2 起为 Go 静态单二进制；本
 
 ## 2. 契约一：状态根 `EASYWORK_HOME`
 
-### 2.1 目录布局
+工具状态（`config.toml` / `manifest` / `completions/` / `run/`）只落在 `$EASYWORK_HOME`
+（默认 `~/.easywork`），沙箱测试只需覆盖 `HOME` 与 `EASYWORK_HOME` 两个变量；
+模块目标文件（`~/.gitconfig`、`~/.vimrc`、`.sh_config_custom` / `$PROFILE`）仍在 `HOME` 下。
 
-```
-EASYWORK_HOME（默认 ~/.easywork，环境变量可覆盖）
-├── config.toml       # 声明式配置（新，见契约二）
-├── config            # 旧 ini（只读兼容，迁移后废弃）
-├── manifest          # 安装状态（见契约三）
-├── lib/v<version>/   # 管道模式下的库缓存
-└── completions/      # shell 补全文件
-```
-
-### 2.2 路径派生函数（在 common.sh 统一提供）
-
-```bash
-ew_home()         # echo "$EASYWORK_HOME"
-ew_config_path()  # "$EASYWORK_HOME/config.toml"
-ew_legacy_config()# "$EASYWORK_HOME/config"          （迁移用）
-ew_manifest_path()# "$EASYWORK_HOME/manifest"
-ew_lib_cache()    # "$EASYWORK_HOME/lib/v$EASYWORK_VERSION"
-ew_completions_dir() # "$EASYWORK_HOME/completions"
-```
-
-### 2.3 规则
-
-- `EASYWORK_HOME` 默认 `"${HOME}/.easywork"`，可通过环境变量 `EASYWORK_HOME` 覆盖（沙箱隔离用）。
-- **工具状态**（config/manifest/lib/completions）一律位于 `EASYWORK_HOME` 下。
-- **模块目标文件**（`~/.gitconfig`、`~/.vimrc`、`~/.sh_config_custom`）仍位于 `HOME` 下，
-  通过覆盖 `HOME` 实现隔离（与现有测试做法一致）。
-- 现有硬编码 `$HOME/.easywork/completions` 等位置全部改为上述函数。
+实现见 `internal/platform/env.go`；规格见 [01-home.md](docs/spec/01-home.md)。
 
 ---
 
 ## 3. 契约二：声明式配置 `config.toml`
 
-### 3.1 Schema（v1，仅标量，无数组/内联表）
+交互只是生成配置的前端，最终状态由单一文件描述。**只支持标量**（string / bool / integer）：
+解析器要能在零依赖环境下实现，数组与内联表会把复杂度推给每个实现（多值用空格分隔的字符串）。
 
 ```toml
-# ~/.easywork/config.toml
 schema_version = 1
 
 [shell]
-enable_aliases      = true    # 安全别名 + g=git + q=exit（默认开）
-enable_fancy_prompt = false   # 花哨提示符（含 Git 分支），默认关
-enable_ohmyzsh      = false   # Oh My Zsh，默认关
-enable_net_tools    = false   # macOS 网络/VPN 工具函数，默认关
-
-[git]
-identity = "personal"        # personal | work | custom
-scope    = "global"          # global | local
+enable_aliases = true
 
 [git.identities.personal]
 name  = "张三"
 email = "zhangsan@example.com"
-
-[git.identities.work]
-name  = "San Zhang"
-email = "san.zhang@company.com"
-
-[vim]
-enabled = true
-
-[ai]
-install = true
-# 细粒度选择（空格分隔子工具）：claude codex pi
-# 留空/注释掉 = 全部；例: tools = "claude codex"
-# tools = "claude codex pi"
 ```
 
-### 3.2 约束
-
-- **仅支持标量值**：`string` / `bool` / `integer`。v1 不支持数组与内联表，
-  以保证内联的简易解析器足够简单。
-- 节名允许点号嵌套（`[git.identities.personal]`）；解析器在内部把「节.键」拍平为
-  `git.identities.personal.name` 这种全路径键。
-- 键名规范：`^[a-zA-Z_][a-zA-Z0-9_.-]*$`。
-- 布尔字面量：`true` / `false`（小写）。
-- 字符串可裸写或双引号包裹；`#` 为注释。
-
-### 3.3 访问器（common.sh 提供）
-
-```bash
-cfg_get <key> [default]       # 读标量，缺失时返回 default
-cfg_get_bool <key> [default]  # 返回 true/false
-cfg_set <key> <value>         # 写回 config.toml（保留注释与顺序，幂等 upsert）
-cfg_valid()                   # 校验语法与 schema_version
-```
-
-### 3.4 旧 ini 迁移
-
-- 首次运行 `apply` 时若发现旧 `config`（ini）而 `config.toml` 不存在，自动迁移：
-  - `GIT_PERSONAL_NAME/EMAIL` → `[git.identities.personal]`
-  - `GIT_WORK_NAME/EMAIL` → `[git.identities.work]`
-- 迁移后保留旧 `config` 为只读，不删除（防误删用户数据）。
-- `ew config` 的查看/编辑目标改为 `config.toml`；`config edit` 打开新文件。
+访问器语义（`Get` / `GetBool` / `Set` / `Valid` / `Has` / `Ensure` / `Migrate`）、
+写入时的原子性与「保留注释与顺序」规则见 [02-config-toml.md](docs/spec/02-config-toml.md)。
 
 ---
 
-## 4. 契约三：manifest 字段
+## 4. 契约三：`manifest`（安装状态）
 
-### 4.1 格式
-
-保持现有 ini 风格，**向后兼容**，仅做字段规范化：
-
-```
-# EasyWork Manifest — auto-generated, do not edit
-schema_version=1
-easywork_version=0.0.1
-install_date=2026-06-12T10:15:30+0800
-
-[shell]
-installed=true
-shell_type=zsh
-display_name=shell (zsh)
-source_file=/Users/x/.zshrc
-config_created=/Users/x/.sh_config_custom
-
-[git]
-installed=true
-scope=global
-config_file=/Users/x/.gitconfig
-config_backup=/Users/x/.gitconfig.bak.20260612T101530
-```
-
-### 4.2 规范
-
-- 顶层保留：`schema_version`、`easywork_version`、`install_date`（ISO8601 带 `%z`）。
-- 每个模块节**必须**含 `installed`，取值：
-  - `true` —— 已安装
-  - `false` —— 未安装（可选，一般不写节）
-  - `failed` —— 上次安装失败
-- `failed` 时必须伴随 `failed_at`（ISO8601）；可选 `last_error`（单行）。
-- `display_name` 可选，供人类友好展示。
-- 模块专属键（`scope`/`config_file`/`vimrc_backup`…）为自由字段，由各模块自定，
-  但键名不得与保留键（`installed`/`failed_at`/`last_error`/`display_name`）冲突。
-- 状态查询命令（`status`）**只依赖** `installed` + `display_name` + `failed_at`，
-  不得依赖模块专属字段。
-
-### 4.3 访问器
-
-现有 `manifest_*` 函数继续沿用，新增：
-
-```bash
-manifest_module_state <name>   # echo true|false|failed|absent
-manifest_module_failed_at <name>
-```
+`$EASYWORK_HOME/manifest` 用 ini 风格记录模块状态，取值封闭为
+`true` / `false` / `failed`（附 `failed_at`），并带 `schema_version` 与安装时间。
+只增字段、不改变已有键，保证升降级双向可读。规格见
+[03-manifest.md](docs/spec/03-manifest.md)。
 
 ---
 
-## 5. 契约四：CLI 命令与 JSON 输出
+## 5. 契约四：CLI 与 JSON 输出
 
-### 5.1 命令清单（v2）
+命令面与参数见 [README](README.md#命令)，此处只固定不变量：
 
-| 命令 | 说明 | 是否支持 `--json` |
-|---|---|---|
-| `init` | 轻量默认：shell 保守别名 + git 别名，零交互、零重依赖 | 是 |
-| `apply [module]` | 按 config.toml 幂等应用（**无交互**） | 是 |
-| `install [module[/component]...]` | 交互向导；支持细粒度选择（见 §13）：`ai` 全装、`ai/claude` 单装、`claude` 简写，多目标空格分隔；可选模块仅显式指名时安装；`--yes` ≈ init | 是 |
-| `uninstall [module]` | 卸载（保留/删除配置遵循 flag） | 是 |
-| `list` | 列出模块与描述 | 是 |
-| `status` | 统一状态（config + 各模块） | 是 |
-| `doctor` | 环境诊断（依赖/网络/权限/shell） | 是 |
-| `config [show\|edit\|get K\|set K V]` | 配置文件管理 | 是 |
-| `completion [setup\|remove\|status]` | 补全管理 | 否 |
-| `version` | 仅输出版本号（组件状态归 `status`） | 是 |
-| `update` | 升级 | 否（`--json` 留待 v2.x） |
-| `help` | 帮助 | 否 |
+- **信封固定**：`{ "ok", "command", "data", "error" }`；失败时 `error = {code, message}`。
+- **分流**：数据走 stdout，日志与进度走 stderr；`--json` 时 stdout 只有信封。
+- **退出码封闭**：`0` 成功 / `1` 通用错误 / `2` 缺依赖 / `3` 网络 / `4` 权限 / `5` 锁 / `130` 中断。
+- **无参数**执行 `ew` 等价 `ew status`；模块名只能用于 `install` / `uninstall`，
+  不再提供「`ew git` 即安装」这类快捷命令。
 
-- **无参数**：显示 `status` 摘要 + 「下一步」建议（不再显示 help）。
-- **移除模块快捷命令**：`ew git` 不再等价 `ew install git`；模块名只出现在
-  `list`/`status` 中，安装统一走 `ew install <模块>`。
-
-### 5.2 全局 flag
-
-```
---json          机器可读输出（stdout 为纯 JSON，日志走 stderr）
---dry-run       预览变更不执行
---yes, -y       跳过确认
---verbose, -v   详细输出
---offline       禁止联网（下载/update/依赖安装一律跳过并告警）
---keep-config   卸载时保留配置
---remove-config 卸载时删除配置
-```
-
-### 5.3 JSON 输出规范
-
-- 统一信封：
-
-```json
-{ "ok": true, "command": "status", "data": { }, "error": null }
-```
-
-- `ok=false` 时 `error` 为 `{ "code": 1, "message": "..." }`（code 复用现有退出码）。
-- `--json` 或 stdout 非 tty 时，stdout 禁止输出 ANSI 与日志；日志一律 stderr。
-- 退出码沿用现有定义：`0` 成功 / `1` 错误 / `2` 缺依赖 / `3` 网络 / `4` 权限 / `5` 锁 / `130` 中断。
-
-### 5.4 各命令 data 形状
-
-```jsonc
-// version
-{ "version": "0.0.1", "channel": "dev",
-  "install_date": "2026-06-12T10:15:30+0800",
-  "installed": ["shell", "git", "vim"],
-  "update": { "latest": "v1.0.0", "available": true } }
-
-// list
-{ "modules": [
-    { "name": "shell", "description": "配置 Shell 环境", "priority": 10 },
-    { "name": "git",   "description": "配置 Git 别名和身份", "priority": 20 },
-    // v2.x（Go 起新增）：可选模块带 optional:true；声明子组件的模块附带 components
-    { "name": "glow", "description": "终端 Markdown 渲染", "priority": 55, "optional": true },
-    { "name": "ai", "description": "安装 AI 编码 CLI", "priority": 50,
-      "components": [
-        { "name": "claude", "description": "Anthropic Claude Code" },
-        { "name": "codex",  "description": "OpenAI Codex CLI" }
-      ] }
-] }
-
-// status
-{ "config": { "path": "/Users/x/.easywork/config.toml", "valid": true },
-  "modules": [
-    { "name": "git", "state": "true", "ok": true, "scope": "global",
-      "identity": "personal" }
-  ],
-  "update": { "latest": "v1.0.0", "available": true } }
-
-// doctor
-{ "checks": [
-    { "name": "curl", "ok": true,  "detail": "/usr/bin/curl" },
-    { "name": "git",  "ok": true,  "detail": "2.40.0" },
-    { "name": "network.github.com", "ok": false, "detail": "timeout" }
-  ],
-  "summary": "2/3 checks failed" }
-```
-
-> `status` 中模块的 `ok` 由「`installed=true` 且 `module_check` 通过」决定；
-> `module_check` 缺失时以 manifest 为准。这正是现有半成品 `module_check`/`module_status`
-> 的正式接入口。
->
-> `version` / `status` / `list` / `doctor` 的 `data` 均含 `update` 字段：
-> `{ "latest": "vX.Y.Z"|null, "available": bool }`（`--offline` 时为 `false`）。
+字节级格式与各命令的 `data` 形状见 [04-cli-json.md](docs/spec/04-cli-json.md)。
 
 ---
 
-## 6. 契约五：模块接口（声明式）
+## 6. 契约五：模块接口
 
-### 6.1 源级契约（保持不变）
+模块**只声明**，写盘由引擎统一负责：`Name/Description/Priority/Platforms` +
+`Install/Uninstall`，可选 `Optional()`（默认不装）、`Components()`（子组件）、`Aliases()`。
+这样备份、还原、幂等、失败记录只在一处实现，模块之间不会互相覆盖。
 
-每个 `lib/*.sh` 模块仍必须声明：
-
-```bash
-MODULE_NAME="git"
-MODULE_DESCRIPTION="配置 Git 别名和身份"
-MODULE_PRIORITY=20
-```
-
-并实现 `module_install` / `module_uninstall`。`module_check` / `module_status` / `module_doctor` 可选。
-
-### 6.2 引擎新增函数（common.sh 统一提供，消除样板）
-
-```bash
-# 幂等写入：自动备份（记录到 backup_var）、写入 managed section
-# 用法: apply_managed_file <目标文件> <内容> <注释风格> <backup_var>
-#   <注释风格>: "#" 或 '"'
-#   <backup_var>: 全局变量名，用于记录备份路径（无备份则为空）
-apply_managed_file() { ... }
-
-# 幂等移除：移除 managed section；若 backup_var 有值则恢复备份
-# 用法: remove_managed_file <目标文件> <backup_var>
-remove_managed_file() { ... }
-
-# 声明式批量应用：遍历 MODULE_DECLARE，逐条 apply_managed_file
-apply_module_files() { ... }
-
-# 声明式批量卸载：遍历 MODULE_DECLARE，逐条 remove_managed_file
-remove_module_files() { ... }
-```
-
-### 6.3 声明式模块推荐形态
-
-```bash
-MODULE_NAME="git"
-MODULE_DESCRIPTION="配置 Git 别名和身份"
-MODULE_PRIORITY=20
-
-# 每条: 目标文件|内容生成函数|注释风格|备份变量名
-MODULE_DECLARE=(
-    "$HOME/.gitconfig|_generate_git_config|#|config_backup"
-)
-
-module_install() {
-    # 1. 从 config.toml 读配置（cfg_get），无交互
-    # 2. 生成内容并写入
-    if ! apply_module_files; then
-        return "$EXIT_ERROR"
-    fi
-    # 3. 记录状态
-    manifest_set_section "git" \
-        "installed=true" \
-        "scope=$(cfg_get git.scope global)" \
-        "display_name=git ($(cfg_get git.identity personal))"
-    return 0
-}
-
-module_uninstall() {
-    remove_module_files
-    return 0
-}
-```
-
-### 6.4 约束
-
-- 模块只通过 `cfg_get`/`cfg_get_bool` 读配置，**不得**在 `module_install` 内出现
-  `read -r -p` 交互（交互一律由 `install` 前端在调用前完成并写回 config.toml）。
-- 所有目标文件写入必须经 `apply_managed_file`，禁止手写 managed section 逻辑。
-- 需要联网/装依赖的模块，必须尊重 `--offline`（`OFFLINE=true` 时跳过并返回
-  `EXIT_SUCCESS` 或明确 `EXIT_NETWORK`，由模块决定并在文档说明）。
+- 注册顺序 = `internal/modules/module.go` 的 `registry` 顺序 = `list` 输出顺序。
+- 目标文件写入只能经 `engine.ApplyManagedSection`；整体文件（plist / systemd unit）
+  用 `engine.ApplyOwnedFile`（首次备份、卸载还原）。
+- 规格见 [05-module-interface.md](docs/spec/05-module-interface.md)、
+  [06-managed-section.md](docs/spec/06-managed-section.md)。
 
 ---
 
@@ -390,44 +137,21 @@ module_uninstall() {
 
 | 项 | 策略 |
 |---|---|
-| 旧 `config`（ini） | 首次 `apply` 自动迁移到 `config.toml`，旧文件保留只读 |
-| `manifest` | 格式不变，仅新增 `schema_version` 与规范化 `installed` 取值 |
-| 现有三个模块 | 逐步迁移到声明式，`module_install`/`module_uninstall` 签名不变 |
-| 命令名 | `easywork` → `ew`，`easywork` 保留为软链别名 |
-| 管道安装 `curl \| bash` | 安装路径不变；库文件 URL 仍按 `EASYWORK_RAW_URL` 拉取 |
-| 现有测试 | `mocks.bash` 的路径覆盖改为基于 `EASYWORK_HOME` 的函数，减少逐个 export |
+| 旧 `config`（ini） | 首次 `install` / `config edit` 自动迁移到 `config.toml`，旧文件保留只读 |
+| `manifest` | 只增字段；`installed` 取值封闭 |
+| 模块目标文件 | managed section 标记逐字节不变，卸载可还原备份 |
+| 命令名 | `easywork` 保留为 `ew` 的软链别名 |
+| 状态根 | `EASYWORK_HOME` 路径与内容格式自 0.1.0 起未变 |
+
+升级与回滚不需要数据迁移脚本，详见 [ROLLBACK.md](docs/ROLLBACK.md)。
 
 ---
 
-## 8. 实施批次（依赖顺序即并行边界）
+## 8. 实施批次（已完成，历史记录）
 
-```
-Batch 0  【本文档】冻结契约
-   │
-Batch 1  契约层落地（改 common.sh + bin/easywork，一次性收口热点）
-   │      · EASYWORK_HOME 统一 + 路径派生函数
-   │      · config.toml 解析器 + cfg_* 访问器 + 旧 ini 迁移
-   │      · --json 框架 + 信封 + 退出码统一
-   │      · manifest schema_version
-   │
-Batch 2  模块引擎（改 common.sh）
-   │      · apply_managed_file / remove_managed_file
-   │      · apply_module_files / remove_module_files
-   │
-Batch 3  并行开发（契约已冻结，互不干扰）
-   │      · 实现 doctor / status / list（契约四）
-   │      · 新可选模块 modern-shell / ai-tools / editor（契约五）
-   │      · 安全强化：签名校验、--offline（独立链路）
-   │      · 文档：AGENTS.md、JSON Schema、README 双受众
-   │
-Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批）
-          · 三个现有模块迁移到声明式
-          · git 模块去交互（改读 config.toml）
-          · 测试重写 mocks 路径层 + 补 JSON/非交互用例
-```
-
-**并行规则**：Batch 2 之后，Batch 3 内各子项可并行；Batch 4 因共享三个模块文件，
-单独成批，不与 Batch 3 同时进行。
+v2 改造按「契约层 → 模块引擎 → 并行开发（可选模块/安全/文档）→ 三模块声明化」
+四个批次推进；Bash 时代的文件（`bin/easywork`、`lib/*.sh`）已在 0.4.0 删除，
+对应能力现分布在 `internal/{engine,modules,platform}`。批次划分仅作历史参考。
 
 ---
 
@@ -441,29 +165,20 @@ Batch 4  收口（改 shell.sh / git.sh / vim.sh，交集最大，集中一批�
 
 ---
 
-## 10. 实施状态（截至本轮）
+## 10. 实施状态
 
-| 契约 / 批次 | 状态 | 落地位置 |
-|---|---|---|
-| 契约一 `EASYWORK_HOME` | ✅ | `internal/platform/env.go`（原 `lib/common.sh`，Bash 已退役） |
-| 契约二 config.toml | ✅（主配置） | `cfg_get` / `cfg_get_bool` / `cfg_set` / `cfg_valid` / `config_migrate`；`ew config get/set` |
-| 契约三 manifest | ✅ | `schema_version` + `manifest_module_state` |
-| 契约四 CLI / JSON | ✅ | `--json` 信封、`json_escape`、`version`/`list`/`status`/`doctor` |
-| 契约五 模块引擎 | ✅ | `apply_managed_file` / `remove_managed_file` / `apply_module_files` / `remove_module_files` |
-| 细粒度组件选择（v2.x） | ✅（Go 起） | `Components()` 接口 + `install module/component` + `ai.tools`（见 §13） |
-| Batch 1 契约层 | ✅ | 见上 |
-| Batch 2 模块引擎 | ✅ | 见上；shell / git / vim 已迁移 |
-| Batch 3 status / doctor / `--offline` | ✅ | `cmd_status` / `cmd_doctor`；`safe_download` 离线守卫 |
-| Batch 3 新模块 | ⏳ 可选 | 模块契约已支持，未内置（modern-shell / ai-tools / editor） |
-| Batch 4 三模块声明化 | ✅ | git / vim 用 `MODULE_DECLARE` + 引擎 |
-| 命令名 `ew` | ✅ | 安装软链 + 补全双覆盖（`ew` / `easywork`） |
-| 人机体验三原则 | ✅ | `ew init` 零交互；Git 身份自动探测；shell 分层默认保守 |
+五个契约均已落地并由 `tests/conformance/`（71 用例）守护；实现位置：
 
-**已完成 / 剩余**：
-
-- ✅ config.toml 已成为主配置；旧 `config`（ini）仅作只读回退，首次 `install` / `config edit` 自动迁移。
-- ⏳ 交互式 `install` 仍保留 Git 作用域/身份菜单（人类可选项）；零交互路径是 `ew init`。
-- ⏳ 新可选模块见 §11（已定稿）。
+| 契约 | 落地位置 |
+|---|---|
+| 一 `EASYWORK_HOME` | `internal/platform/env.go` |
+| 二 `config.toml` | `internal/engine/config.go`（`Get`/`GetBool`/`Set`/`Valid`/`Has`/`Ensure`/`Migrate`） |
+| 三 `manifest` | `internal/engine/manifest.go` |
+| 四 CLI / JSON | `internal/cli/*`、`internal/engine/json.go` |
+| 五 模块引擎 | `internal/engine/managed.go`、`internal/engine/owned.go`、`internal/modules/*` |
+| 六 managed section 协议 | `internal/engine/managed.go` |
+| 七 跨平台行为 | `internal/platform/*` |
+| 八 设备防休眠 | `internal/keepawake/*`（见 `docs/spec/08-keepawake.md`） |
 
 ---
 
@@ -568,37 +283,20 @@ EasyWork（一套代码）
   探测 OS/arch → 下载对应二进制到 PATH（含 PATH/PATHEXT 配置）→ 执行；不再下载 `lib/*.sh`。
 - 平台包管理分发（可选）：Homebrew tap / winget manifest / Scoop bucket。
 
-### 12.7 迁移阶段与门禁
+### 12.7 迁移结果
 
-| 阶段 | 内容 | 门禁 |
-|---|---|---|
-| **M0** | 决策定稿 + Go spike（后由 conformance 承接，spike 已删） | `status --json` 与 Bash **字节等价**；`GOOS=windows` 可构建并在 `windows-latest` 运行 |
-| **M1** | 契约升为语言无关规格 + 黑盒 conformance | conformance 对 **Bash 版**全绿 |
-| **M2** | Go 工程骨架 + `internal/platform` + 核心引擎 | conformance 对 **Go 版**（Unix）全绿 |
-| **M3** | 逐模块移植（git→gh→vim→ai→shell） | 每模块单独过 conformance |
-| **M4** | Windows 原生适配 + `shell-pwsh` 评估 | Windows CI 端到端 `init` / `install git gh` / `uninstall` |
-| **M5** | 交叉编译与发布流水线 | 三平台产物可下载运行；版本单一来源校验通过 |
-| **M6** | 分发与向后兼容 | 老用户 `EASYWORK_HOME` 无感迁移 |
-| **M7** | 测试矩阵、验收与回滚 | 三 OS 矩阵 + `-race` + conformance 全绿；回滚演练记录 |
+| 阶段 | 结果 |
+|---|---|
+| M0 决策 + spike | 决策定稿；Bash↔Go 字节等价；spike 已在 M2 后删除 |
+| M1 规格 + conformance | `docs/spec/` 定稿，黑盒 conformance 成为唯一等价判据 |
+| M2–M3 Go 引擎与模块 | `internal/{platform,engine,modules}`；git/gh/vim/ai/shell 逐模块过 conformance |
+| M4 Windows 原生 | winget/scoop/choco、PowerShell `$PROFILE`、PATHEXT、跨平台锁；Windows 进 CI |
+| M5 交叉编译与发布 | 6 目标矩阵 + `checksums.txt` + attestation（不依赖 goreleaser） |
+| M6 分发与兼容 | `bootstrap.sh` / `bootstrap.ps1` 薄引导；旧 `EASYWORK_HOME` 无感 |
+| M7 矩阵与回滚 | 三 OS CI + 6 目标交叉编译；`docs/ROLLBACK.md` |
 
-> `legacy` 归档后，`bin/easywork` 不再作为引擎；0.4.0 起已删除，只保留 `bootstrap.sh` / `bootstrap.ps1` 薄引导。
-
-### 12.8 实施状态（迁移期）
-
-| 阶段 | 状态 | 说明 |
-|---|---|---|
-| M0 决策 + spike | ✅ | 决策定稿；Bash↔Go 字节等价；5 平台交叉编译（spike 已在 M2 后删除） |
-| M1 规格 + conformance | ✅ | `docs/spec/`；`tests/conformance/`（49 用例：C1–C10 + G1 Go-only） |
-| M2 Go 骨架 + 平台抽象 | ✅ | `internal/platform`、`internal/engine` |
-| M3 模块移植 | ✅ | git/gh/vim/ai/shell，逐模块 conformance 通过 |
-| M4 Windows 原生 | ✅ | winget/scoop/choco、PowerShell profile、PATHEXT、跨平台锁；Windows Go-only conformance 入 CI |
-| M5 交叉编译发布 | ✅ | release.yml 矩阵 + checksums/attestation（不依赖 goreleaser） |
-| M6 分发与兼容 | ✅ | `bootstrap.sh` 薄引导；旧 `EASYWORK_HOME` 无感 |
-| M7 矩阵/验收/回滚 | ✅ | `go-engine` CI 三平台（Windows 含 Go conformance）+ PR `cross-compile` 6 目标；`docs/ROLLBACK.md` |
-
-> 迁移期黑盒 conformance 同时验证 Bash 与 Go（`tests/conformance/run.sh all`）；
-> 0.4.0 起 Bash 退役，门禁收敛为 `tests/conformance/run.sh go`。
-> G1（细粒度子组件）与 C11（设备防休眠）为 Go 独有能力。
+迁移期 conformance 同时验证 Bash 与 Go；0.4.0 起 Bash 退役（§15），门禁收敛为
+`tests/conformance/run.sh go`。
 
 ---
 

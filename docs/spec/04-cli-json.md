@@ -11,8 +11,7 @@
 | `version` | 版本与已装组件 | 是 | **冻结** |
 | `doctor` | 环境诊断 | 是 | **冻结** |
 | `init` | 轻量默认（shell+git），零交互 | 是 | 规划 |
-| `apply [module]` | 按 config.toml 幂等应用 | 是 | 规划 |
-| `install [module]` | 交互向导（`--yes` ≈ init） | 是 | 规划 |
+| `install [module]` | 按 config.toml 幂等安装（`--yes` ≈ init）；重复执行即「收敛」 | 是 | 规划 |
 | `uninstall [module]` | 卸载 | 是 | 规划 |
 | `config [show\|edit\|get K\|set K V]` | 配置管理 | 是 | 规划 |
 | `completion [setup\|remove\|status]` | 补全管理 | 否 | — |

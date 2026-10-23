@@ -82,6 +82,22 @@ func TestKeepawakeHintActiveIsPlatformSpecific(t *testing.T) {
 	}
 }
 
+func TestMarkKeepawakeInstalled(t *testing.T) {
+	app := testApp(t)
+	// 首次调用应创建 manifest 并写入模块状态
+	app.markKeepawakeInstalled()
+	if state := app.Manifest.ModuleState("keepawake"); state != "true" {
+		t.Fatalf("manifest 应记录 keepawake=true，得到 %q", state)
+	}
+	// dry-run 不写盘（换一个干净的 App 验证）
+	app2 := testApp(t)
+	app2.DryRun = true
+	app2.markKeepawakeInstalled()
+	if app2.Manifest.Exists() {
+		t.Fatal("--dry-run 不应创建 manifest")
+	}
+}
+
 func TestDescribeSpec(t *testing.T) {
 	if got := describeSpec(keepawake.Spec{}); got != "关闭" {
 		t.Fatalf("关闭描述错误: %q", got)

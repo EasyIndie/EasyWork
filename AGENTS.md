@@ -70,7 +70,18 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 - **并发锁**：`platform.AcquireLock`（`O_CREATE|O_EXCL` + 陈旧回收）
 - **安装编排**：`priority` 升序；可选模块仅显式指名才装；失败不阻塞后续模块并写 `failed`
 
-## 6. 当前状态（0.4.0）
+## 6. 文档地图
+
+| 文件 | 定位 |
+|---|---|
+| `README.md` | 用户入口：安装、命令、模块、配置、防休眠 |
+| `docs/spec/` | **规范性契约**（行为等价判据），改行为先改这里 |
+| `docs/ACCEPTANCE.md` | 验收项与 CI 对应关系 |
+| `docs/RETIREMENT.md` / `docs/ROLLBACK.md` | 退役记录与回滚方式 |
+| `DESIGN.md` | 设计决策与迁移历史（**非规范**，冲突以 `docs/spec/` 为准） |
+| `site/` | 产品页（GitHub Pages，`https://easywork.jokerhub.cn/`） |
+
+## 7. 当前状态（0.4.x）
 
 - ✅ 5 个契约 + managed section 协议 + 跨平台行为（`docs/spec/`）
 - ✅ CLI/JSON 信封、`--json` 分流、退出码封闭集合
@@ -78,11 +89,12 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 - ✅ 子组件细选（`ai/claude`、`claude` 简写）
 - ✅ **设备防休眠 `keepawake`**（`docs/spec/08-keepawake.md`，C11）：只注册电源断言、
   零 sudo；五态 status；`--persist` 写自启单元
-- ✅ Windows 原生：`$PROFILE` 注入、winget/scoop/choco、UTF-8 控制台与管道编码适配
+- ✅ Windows 原生：`$PROFILE` 注入、winget/scoop/choco、UTF-8 控制台与管道编码适配；
+  安装链路在 PowerShell 5.1 与 7 上都有 e2e（含 `irm | iex`）
 - ✅ **Bash 引擎已退役**：`bin/` `lib/` `MODULES` `easywork.conf.example` 与 Bash 白盒测试已删除
 - ❌ 明确不做：GUI 应用（终端模拟器除外）、editor、modern-shell、AI 会话编排器
 
-## 7. 改动规则
+## 8. 改动规则
 
 1. **改契约前先改 `docs/spec/`**，再改实现。
 2. **交互与执行分离**：`Install()` 内禁止交互；交互由 `ew install` 前端完成后写回 config。
@@ -92,12 +104,15 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 5. 新增功能必须补测试；改动后先跑 `make check`。
 6. **不要恢复 Bash 引擎**；`make retire-check` 会拦。
 
-## 8. 测试约定
+## 9. 测试约定
 
 - `make test` = `tests/conformance/run.sh go`：黑盒，通过 `$EW_BIN` 调用二进制，
   每个用例独立 `HOME`/`EASYWORK_HOME` 沙箱（`mktemp -d`），对 stdout 做字节级断言
 - `tests/conformance/helpers.bash` 导出 `EASYWORK_OUTPUT_ENCODING=utf8`（保证跨平台字节稳定）
-- 不发起真实网络：本地镜像端口由 `scripts/{bootstrap,update}-e2e.sh` 提供（127.0.0.1）
+- 不发起真实网络：本地镜像端口由 `scripts/{bootstrap,update}-e2e.sh`（Windows 为
+  `bootstrap-e2e.ps1`）提供（127.0.0.1）
+- `scripts/bootstrap-e2e.ps1` 必须保持**纯 ASCII**：Windows PowerShell 5.1 按 ANSI
+  解析无 BOM 脚本（脚本内有自检，CI 也有断言）
 - Go 单测：纯函数与可注入依赖（`Runner`/`Clock` 等），不得改动宿主真实状态
   （如 keepawake 测试注入 fake runner，不真的起 caffeinate/launchctl）
 - CI：`shell-lint`（shellcheck+shfmt）、`install-e2e`（三平台：Unix 跑 `bootstrap-e2e.sh`，
@@ -108,7 +123,7 @@ bootstrap.sh|.ps1  # 下载并安装二进制（唯一安装入口）
 - `scripts/bootstrap-e2e.ps1` 必须保持**纯 ASCII**：Windows PowerShell 5.1 会按 ANSI
   解析无 BOM 脚本，非 ASCII 文本可能破坏语法（CI 有专门断言）
 
-## 9. 一句话风格要求
+## 10. 一句话风格要求
 
 保持与现有代码一致：中文注释/日志、英文标识符、错误信息给出「可复制的修复命令」而非术语；
 平台差异集中在 `internal/platform`，业务代码不出现 `runtime.GOOS` 分支散落。

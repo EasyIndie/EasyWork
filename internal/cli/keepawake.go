@@ -59,7 +59,22 @@ func (a *App) keepawakeOn(opts []string, spec keepawake.Spec) int {
 	if err := ctl.On(spec); err != nil {
 		return a.keepawakeError(err)
 	}
+	a.markKeepawakeInstalled()
 	return a.emitKeepawake(ctl.Status(spec))
+}
+
+// markKeepawakeInstalled 让 manifest 与运行态一致：否则 `ew keepawake on` 之后
+// `ew status` 仍会显示 keepawake「未安装」。
+func (a *App) markKeepawakeInstalled() {
+	if a.DryRun {
+		return
+	}
+	if !a.Manifest.Exists() {
+		if err := a.Manifest.Init(a.Env, a.Version); err != nil {
+			return
+		}
+	}
+	_ = a.Manifest.SetSection("keepawake", "installed=true")
 }
 
 func (a *App) keepawakeOff(spec keepawake.Spec) int {

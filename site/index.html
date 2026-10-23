@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EasyWork — 一条命令，配置好开发环境</title>
-<meta name="description" content="EasyWork 是 Go 静态单二进制的开发环境配置 CLI：一份 config.toml 装好 Shell、Git、Vim、gh、AI 工具，幂等可回滚，macOS / Linux / Windows 通用。">
+<title>EasyWork — 开发环境配置工具</title>
+<meta name="description" content="用一份 config.toml 安装并管理 Shell、Git、Vim、gh 与 AI 工具，可选设备防休眠。Go 静态单二进制，macOS / Linux / Windows 通用。">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
-<meta property="og:title" content="EasyWork — 一条命令，配置好开发环境">
-<meta property="og:description" content="Go 静态单二进制 · 声明式配置 · 幂等 · macOS / Linux / Windows">
+<meta property="og:title" content="EasyWork — 开发环境配置工具">
+<meta property="og:description" content="Go 静态单二进制 · 声明式 config.toml · 幂等安装 · macOS / Linux / Windows">
 <meta property="og:url" content="https://easywork.jokerhub.cn/">
 <link rel="canonical" href="https://easywork.jokerhub.cn/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -26,7 +26,8 @@
     </a>
     <nav class="nav" aria-label="主导航">
       <a href="#install">安装</a>
-      <a href="#commands">命令</a>
+      <a href="#usage">用法</a>
+      <a href="#reference">参考</a>
       <a class="nav-ext" href="https://github.com/EasyIndie/EasyWork" rel="noopener">GitHub</a>
     </nav>
   </div>
@@ -35,10 +36,10 @@
 <main id="main">
 
   <section class="hero container" id="install">
-    <h1>一条命令，<br class="br-mobile">配置好开发环境</h1>
+    <h1>EasyWork</h1>
     <p class="lede">
-      一份 <code>config.toml</code> 装好 Shell、Git、Vim、gh 与 AI 工具。
-      安装幂等、可回滚，macOS / Linux / Windows 通用。
+      开发环境配置工具。用一份 <code>config.toml</code> 安装并管理 Shell、Git、Vim、gh、
+      AI 工具，以及可选的设备防休眠。Go 静态单二进制，支持 macOS、Linux、Windows。
     </p>
 
     <div class="code rows">
@@ -51,59 +52,68 @@
       </div>
       <div class="row" data-copy-block>
         <div class="row-head">
-          <span class="os">Windows</span>
+          <span class="os">Windows · PowerShell</span>
           <button class="copy" type="button" aria-label="复制 Windows 安装命令">复制</button>
         </div>
         <code class="cmd">irm https://raw.githubusercontent.com/EasyIndie/EasyWork/main/bootstrap.ps1 | iex</code>
       </div>
     </div>
 
-    <p class="meta">
-      Go 静态单二进制，零运行时依赖 · 安装时校验 sha256 ·
-      <a href="https://github.com/EasyIndie/EasyWork/releases/latest" rel="noopener">手动下载</a>
+    <p class="note">
+      安装时校验 sha256，装入 <code>/usr/local/bin</code> 或 <code>~/.local/bin</code>；
+      固定版本用 <code>EASYWORK_VERSION</code>。其余版本见
+      <a href="https://github.com/EasyIndie/EasyWork/releases" rel="noopener">Releases</a>。
     </p>
   </section>
 
-  <section class="section container">
-    <h2>三步开始</h2>
+  <section class="container" id="usage">
+    <h2>用法</h2>
     <div class="code block" data-copy-block>
       <div class="block-head">
         <span>终端</span>
-        <button class="copy" type="button" aria-label="复制三步开始命令">复制</button>
+        <button class="copy" type="button" aria-label="复制用法命令">复制</button>
       </div>
-      <pre><code class="cmd"><span class="dim"># 1. 轻量初始化：shell 别名 + git 别名，零交互</span>
-ew init
-<span class="dim"># 2. 按 config.toml 装好全套（--dry-run 可先预览）</span>
+      <pre><code class="cmd">ew init
 ew install --yes
-<span class="dim"># 3. 查看状态与诊断</span>
-ew status
-ew doctor</code></pre>
+ew status</code></pre>
     </div>
+    <p class="note">
+      重复执行是安全的：已经正确的部分不会被重写。<code>--dry-run</code> 预览变更，
+      <code>--json</code> 输出给脚本与自动化消费。
+    </p>
   </section>
 
-  <section class="section container">
-    <h2>为什么用它</h2>
-    <ul class="points">
-      <li>
-        <h3>单二进制，零依赖</h3>
-        <p>下载即用，卸载即删；不装 Node、Python 或任何运行时。</p>
-      </li>
-      <li>
-        <h3>声明式且幂等</h3>
-        <p>改 <code>config.toml</code> 再 apply；只在自己的 managed section 内改写，保留你原有内容并自动备份。</p>
-      </li>
-      <li>
-        <h3>人与机器都能读</h3>
-        <p>默认输出可读摘要；<code>--json</code> 给出字节级稳定的结果，日志一律走 stderr。</p>
-      </li>
-    </ul>
+  <section class="container" id="reference">
+    <h2>参考</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">命令</th><th scope="col">作用</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ew init</code></td><td>轻量初始化：shell 与 git 别名，零交互</td></tr>
+          <tr><td><code>ew install</code></td><td>按 <code>config.toml</code> 安装全部或指定组件</td></tr>
+          <tr><td><code>ew uninstall</code></td><td>卸载并还原备份</td></tr>
+          <tr><td><code>ew status</code></td><td>配置与模块状态</td></tr>
+          <tr><td><code>ew doctor</code></td><td>依赖、网络、控制台编码、电源策略诊断</td></tr>
+          <tr><td><code>ew config</code></td><td>读写 <code>config.toml</code></td></tr>
+          <tr><td><code>ew keepawake</code></td><td>设备防休眠：开启、关闭、状态</td></tr>
+          <tr><td><code>ew update</code></td><td>自升级，下载后校验 sha256</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      完整命令见 <code>ew help</code>，模块清单见 <code>ew list</code>，
+      契约与 JSON 格式见 <a href="https://github.com/EasyIndie/EasyWork/tree/main/docs/spec" rel="noopener">接口规格</a>。
+    </p>
   </section>
 
-  <section class="section container">
-    <h2>附带的设备防休眠</h2>
-    <p class="lede tight">
-      跑长任务时用 <code>ew keepawake</code>：只注册系统电源断言，不需要 sudo、不改系统电源策略；
-      默认「接电不睡、拔电照常节能」，<code>status</code> 报告真实断言状态。合盖仍会睡眠。
+  <section class="container" id="keepawake">
+    <h2>设备防休眠</h2>
+    <p class="note before-code">
+      长任务不被打断时使用 <code>ew keepawake</code>。它只注册系统电源断言
+      （macOS <code>caffeinate</code>、Linux <code>systemd-inhibit</code>、
+      Windows <code>SetThreadExecutionState</code>），不需要 sudo，也不修改系统电源策略。
     </p>
     <div class="code block" data-copy-block>
       <div class="block-head">
@@ -113,39 +123,57 @@ ew doctor</code></pre>
       <pre><code class="cmd">ew keepawake on --persist
 ew keepawake status</code></pre>
     </div>
+    <dl class="facts">
+      <div>
+        <dt>mode</dt>
+        <dd><code>ac</code>：接电生效、拔电按系统策略节能；<code>always</code>：电池也阻止睡眠</dd>
+      </div>
+      <div>
+        <dt>status</dt>
+        <dd>校验真实断言（macOS 读 <code>pmset -g assertions</code>），区分
+          <code>active</code> / <code>pending-ac</code> / <code>stale</code> / <code>inactive</code></dd>
+      </div>
+      <div>
+        <dt>边界</dt>
+        <dd>合盖仍会睡眠；<code>off</code> 会同时拆除自启单元</dd>
+      </div>
+    </dl>
   </section>
 
-  <section class="section container" id="commands">
-    <h2>常用命令</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th scope="col">命令</th><th scope="col">作用</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>ew init</code></td><td>轻量初始化：shell + git 别名，零交互</td></tr>
-          <tr><td><code>ew install</code></td><td>安装全部或指定组件；<code>--dry-run</code> 预览</td></tr>
-          <tr><td><code>ew status</code></td><td>配置与各模块状态</td></tr>
-          <tr><td><code>ew doctor</code></td><td>依赖、网络、控制台编码、电源策略诊断</td></tr>
-          <tr><td><code>ew config</code></td><td>读写 <code>config.toml</code></td></tr>
-          <tr><td><code>ew keepawake</code></td><td>设备防休眠的开启、关闭与状态</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="meta">完整命令与模块清单见 <a href="https://github.com/EasyIndie/EasyWork/blob/main/README.md" rel="noopener">README</a>。</p>
+  <section class="container" id="notes">
+    <h2>说明</h2>
+    <dl class="facts">
+      <div>
+        <dt>写入边界</dt>
+        <dd>只改写目标文件中的 managed section，其余内容原样保留；首次接管前备份，卸载时还原</dd>
+      </div>
+      <div>
+        <dt>输出</dt>
+        <dd>数据走 stdout、日志走 stderr；<code>--json</code> 信封固定为
+          <code>{ok, command, data, error}</code>，退出码取值封闭</dd>
+      </div>
+      <div>
+        <dt>兼容</dt>
+        <dd><code>config.toml</code>、manifest 与 managed section 标记跨版本不变，升降级无需迁移</dd>
+      </div>
+      <div>
+        <dt>许可</dt>
+        <dd>MIT；无遥测，不收集任何使用数据</dd>
+      </div>
+    </dl>
   </section>
 
 </main>
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <p>EasyWork · MIT License</p>
+    <p>© EasyIndie · MIT</p>
     <p class="footer-links">
       <a href="https://github.com/EasyIndie/EasyWork" rel="noopener">源码</a>
       <a href="https://github.com/EasyIndie/EasyWork/tree/main/docs/spec" rel="noopener">接口规格</a>
       <a href="https://github.com/EasyIndie/EasyWork/blob/main/CHANGELOG.md" rel="noopener">更新日志</a>
-      <a href="https://github.com/EasyIndie/EasyWork/blob/main/CONTRIBUTING.md" rel="noopener">贡献</a>
-      <a href="https://github.com/EasyIndie/EasyWork/releases/latest" rel="noopener">Releases</a>
+      <a href="https://github.com/EasyIndie/EasyWork/releases" rel="noopener">Releases</a>
+      <a href="https://github.com/EasyIndie/EasyWork/issues" rel="noopener">问题反馈</a>
     </p>
   </div>
 </footer>

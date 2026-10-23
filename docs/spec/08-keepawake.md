@@ -62,7 +62,7 @@ Assertion status: PreventSystemSleep 0                                          
 | `ew keepawake on [flags]` | 写 `enabled=true` + flags 落盘 | 立即起断言（幂等） |
 | `ew keepawake off` | 写 `enabled=false` | 停断言 + 拆自启 |
 | `ew keepawake status` | 只读回显 | 只读探测（不写盘） |
-| `ew apply keepawake` | 不变 | 按 config 收敛（`enabled=false` 则停） |
+| `ew install keepawake` | 不变 | 按 config 收敛（`enabled=false` 则停） |
 | `ew install keepawake` | 缺省时补写 `enabled=true` | 收敛到 desired |
 
 ## 4. 配置契约（`[keepawake]`，仅标量）
@@ -130,7 +130,7 @@ persist = "false"   # 是否写入开机自启单元
 - `on` 必须**确认断言已登记**再返回成功（最多等 1 s），失败回滚进程并返回 `1`。
 - `off` 无条件成功：`SIGTERM`→`SIGKILL`、清状态、拆自启；未运行时同样返回 `0`。
   自启单元只删除「含 EasyWork 标记」的文件（防止误删同名文件）。
-- `uninstall` = `off` + 保留 config；`off` 会把 `enabled` 写回 `false`（避免 `apply` 又开回来）。
+- `uninstall` = `off` + 保留 config；`off` 会把 `enabled` 写回 `false`（避免下次 `install` 又开回来）。
 
 ### 7.1 Windows 实现陷阱（真机实测，勿回退）
 
